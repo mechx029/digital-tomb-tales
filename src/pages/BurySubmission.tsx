@@ -3,29 +3,29 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { Upload, DollarSign, Crown, Zap, Star } from 'lucide-react';
 import { categories } from '@/data/mockGraves';
-import { Upload, DollarSign, Crown, Image as ImageIcon, Video, Package } from 'lucide-react';
 
 const BurySubmission = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [title, setTitle] = useState('');
-  const [epitaph, setEpitaph] = useState('');
-  const [category, setCategory] = useState('');
-  const [packageType, setPackageType] = useState('basic');
-  const [isAnonymous, setIsAnonymous] = useState(false);
-  const [image, setImage] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    epitaph: '',
+    author: '',
+    category: '',
+    isAnonymous: false,
+    package: 'basic',
+  });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const packages = [
     {
@@ -33,346 +33,315 @@ const BurySubmission = () => {
       name: 'Basic Burial',
       price: 1,
       icon: '⚰️',
-      description: 'Text burial with public memorial',
-      features: ['Text burial', 'Public memorial', 'Share anywhere', 'Forever buried']
+      features: ['Text burial', 'Public memorial', 'Share anywhere', 'Forever buried'],
+      color: 'border-slate-600 hover:border-green-500',
+      bgColor: 'hover:bg-green-500/5'
     },
     {
       id: 'premium',
-      name: 'Premium',
+      name: 'Premium Memorial',
       price: 3,
       icon: '📸',
-      description: 'Text + Image with enhanced memorial',
-      features: ['Text + Image', 'Enhanced memorial', 'Priority display', 'Social sharing']
+      features: ['Text + Image', 'Enhanced memorial', 'Priority display', 'Social sharing'],
+      color: 'border-slate-600 hover:border-blue-500',
+      bgColor: 'hover:bg-blue-500/5'
     },
     {
       id: 'video',
-      name: 'Video Memorial',
+      name: 'Video Burial',
       price: 5,
       icon: '🎬',
-      description: '10-second video upload',
-      features: ['10-sec video', 'Moving memorial', 'Viral potential', 'Maximum impact']
+      features: ['10-sec video', 'Moving memorial', 'Viral potential', 'Maximum impact'],
+      color: 'border-slate-600 hover:border-purple-500',
+      bgColor: 'hover:bg-purple-500/5'
     },
     {
       id: 'featured',
-      name: 'Featured',
+      name: 'Featured Grave',
       price: 10,
       icon: '👑',
-      description: 'Top placement for 24 hours',
-      features: ['Top placement 24h', 'Featured badge', 'Maximum visibility', 'Guaranteed viral']
-    },
-    {
-      id: 'bundle',
-      name: 'Bundle',
-      price: 25,
-      icon: '📦',
-      description: '5 burials at once',
-      features: ['5 burials included', 'Mix any types', 'Bulk discount', 'Mass burial']
+      features: ['Top placement 24h', 'Featured badge', 'Maximum visibility', 'Guaranteed viral'],
+      color: 'border-yellow-500/50 hover:border-yellow-400',
+      bgColor: 'hover:bg-yellow-500/10',
+      special: true
     }
   ];
-
-  const selectedPackage = packages.find(pkg => pkg.id === packageType);
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({
-          title: "File too large",
-          description: "Please choose an image under 5MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      setImage(file);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title.trim() || !epitaph.trim() || !category) {
+    if (!formData.title || !formData.epitaph || !formData.category) {
       toast({
-        title: "Missing information",
-        description: "Please fill in all required fields",
+        title: "Incomplete burial! 💀",
+        description: "Please fill in all required fields to proceed with the burial.",
         variant: "destructive",
       });
       return;
     }
 
-    setLoading(true);
+    setIsSubmitting(true);
     
-    try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Create the burial
-      const newGrave = {
-        id: Math.random().toString(36).substr(2, 9),
-        title,
-        epitaph,
-        author: isAnonymous ? 'Anonymous' : user?.email || 'Unknown',
-        category,
-        packageType,
-        timestamp: new Date().toISOString(),
-        reactions: { skull: 0, fire: 0, crying: 0, clown: 0 },
-        shares: 0,
-        featured: packageType === 'featured',
-        image: image ? URL.createObjectURL(image) : undefined
-      };
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const selectedPackage = packages.find(p => p.id === formData.package);
+    
+    toast({
+      title: "🪦 Burial Complete!",
+      description: `Your digital regret has been buried forever for $${selectedPackage?.price}. May it rest in peace.`,
+    });
+    
+    setIsSubmitting(false);
+    navigate('/graveyard');
+  };
 
-      toast({
-        title: "Burial complete! 💀",
-        description: `Your ${selectedPackage?.name} burial has been processed`,
-      });
-
-      // Redirect to the new grave (simulate)
-      navigate(`/grave/${newGrave.id}`, { 
-        state: { newGrave, showSharePrompt: true } 
-      });
-    } catch (error) {
-      toast({
-        title: "Burial failed",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleAnonymousChange = (checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      isAnonymous: checked
+    }));
   };
 
   return (
-    <div className="min-h-screen cemetery-bg">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Animated background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-green-500/5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-red-500/5 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
+
+      <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Header */}
-        <div className="text-center mb-8">
-          <span className="text-6xl block mb-4 float-animation">🪦</span>
-          <h1 className="font-creepster text-3xl md:text-4xl text-primary glow-text mb-4">
-            Bury Something Forever
+        <div className="text-center mb-12">
+          <div className="mb-6 relative">
+            <span className="text-8xl block mb-4 animate-bounce" style={{ animationDuration: '3s' }}>⚰️</span>
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-2xl animate-float opacity-60">
+              👻
+            </div>
+          </div>
+          
+          <h1 className="font-creepster text-4xl md:text-6xl text-green-400 glow-text mb-4">
+            Digital Burial Chamber
           </h1>
-          <p className="text-muted-foreground text-lg">
-            What digital regret needs to rest in peace?
+          <p className="text-xl text-slate-300 mb-2">
+            Lay your digital regrets to <span className="text-red-400 font-bold">eternal rest</span>
+          </p>
+          <p className="text-slate-400">
+            Choose your burial package and let the darkness consume your shame forever.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Package Selection */}
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-primary" />
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Burial Packages */}
+            <div className="lg:col-span-3 mb-8">
+              <h2 className="text-2xl font-bold text-slate-200 mb-6 flex items-center gap-3">
+                <Crown className="w-6 h-6 text-yellow-400" />
                 Choose Your Burial Package
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup value={packageType} onValueChange={setPackageType}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {packages.map((pkg) => (
-                    <div key={pkg.id} className="relative">
-                      <RadioGroupItem
-                        value={pkg.id}
-                        id={pkg.id}
-                        className="sr-only"
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {packages.map((pkg) => (
+                  <Card
+                    key={pkg.id}
+                    className={`cursor-pointer transition-all duration-300 transform hover:scale-105 bg-slate-800/50 backdrop-blur-sm ${pkg.color} ${pkg.bgColor} ${
+                      formData.package === pkg.id ? 'ring-2 ring-green-500 bg-green-500/10' : ''
+                    } ${pkg.special ? 'shadow-lg shadow-yellow-500/20' : ''}`}
+                    onClick={() => setFormData(prev => ({ ...prev, package: pkg.id }))}
+                  >
+                    <CardHeader className="text-center pb-3">
+                      <div className="text-4xl mb-2">{pkg.icon}</div>
+                      <CardTitle className="text-lg text-slate-200">{pkg.name}</CardTitle>
+                      <div className="text-3xl font-bold text-green-400 flex items-center justify-center gap-1">
+                        <DollarSign className="w-6 h-6" />
+                        {pkg.price}
+                      </div>
+                      {pkg.special && (
+                        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                          🔥 MOST POPULAR
+                        </Badge>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="text-sm text-slate-400 space-y-2">
+                        {pkg.features.map((feature, index) => (
+                          <li key={index} className="flex items-center gap-2">
+                            <span className="text-green-400">•</span>
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Burial Form */}
+            <div className="lg:col-span-2">
+              <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700/50">
+                <CardHeader>
+                  <CardTitle className="text-2xl text-slate-200 flex items-center gap-3">
+                    <span className="text-3xl">🪦</span>
+                    Burial Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Title */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        What are you burying? *
+                      </label>
+                      <Input
+                        value={formData.title}
+                        onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                        placeholder="e.g., My NFT collection, My ex's Instagram, Web3 dreams..."
+                        className="bg-slate-900/50 border-slate-600 text-slate-200 placeholder-slate-500 focus:border-green-500 focus:ring-green-500/20"
+                        required
                       />
-                      <Label
-                        htmlFor={pkg.id}
-                        className={`block p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
-                          packageType === pkg.id
-                            ? 'border-primary bg-primary/10 ghost-glow'
-                            : 'border-border/50 hover:border-primary/50'
-                        }`}
-                      >
-                        <div className="text-center">
-                          <div className="text-3xl mb-2">{pkg.icon}</div>
-                          <div className="font-bold text-lg">{pkg.name}</div>
-                          <div className="text-2xl font-bold text-primary">${pkg.price}</div>
-                          <div className="text-sm text-muted-foreground mb-3">
-                            {pkg.description}
-                          </div>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {pkg.features.map((feature, index) => (
-                              <li key={index}>• {feature}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </Label>
                     </div>
-                  ))}
-                </div>
-              </RadioGroup>
-            </CardContent>
-          </Card>
 
-          {/* Burial Details */}
-          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
-            <CardHeader>
-              <CardTitle>Burial Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Title */}
-              <div>
-                <Label htmlFor="title">What are you burying? *</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., My NFT Collection, My Ex, My Diet Plans..."
-                  className="bg-background/50"
-                  maxLength={100}
-                />
-                <div className="text-xs text-muted-foreground text-right mt-1">
-                  {title.length}/100
-                </div>
-              </div>
+                    {/* Epitaph */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Final Words / Epitaph *
+                      </label>
+                      <Textarea
+                        value={formData.epitaph}
+                        onChange={(e) => setFormData(prev => ({ ...prev, epitaph: e.target.value }))}
+                        placeholder="Write the final words for what you're burying. Be creative, be dramatic, be real..."
+                        rows={4}
+                        className="bg-slate-900/50 border-slate-600 text-slate-200 placeholder-slate-500 focus:border-green-500 focus:ring-green-500/20"
+                        required
+                      />
+                    </div>
 
-              {/* Epitaph */}
-              <div>
-                <Label htmlFor="epitaph">Epitaph / Last Words *</Label>
-                <Textarea
-                  id="epitaph"
-                  value={epitaph}
-                  onChange={(e) => setEpitaph(e.target.value)}
-                  placeholder="Write the final words for what you're burying. Make it memorable..."
-                  className="bg-background/50 min-h-[120px]"
-                  maxLength={500}
-                />
-                <div className="text-xs text-muted-foreground text-right mt-1">
-                  {epitaph.length}/500
-                </div>
-              </div>
+                    {/* Category */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Category *
+                      </label>
+                      <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                        <SelectTrigger className="bg-slate-900/50 border-slate-600 text-slate-200 focus:border-green-500 focus:ring-green-500/20">
+                          <SelectValue placeholder="Choose a category for your burial" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-800 border-slate-700">
+                          {categories.map((category) => (
+                            <SelectItem key={category} value={category} className="text-slate-200 focus:bg-slate-700">
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-              {/* Category */}
-              <div>
-                <Label>Category *</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="bg-background/50">
-                    <SelectValue placeholder="Choose a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    {/* Author */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Your Name
+                      </label>
+                      <Input
+                        value={formData.author}
+                        onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
+                        placeholder="How should we credit this burial?"
+                        className="bg-slate-900/50 border-slate-600 text-slate-200 placeholder-slate-500 focus:border-green-500 focus:ring-green-500/20"
+                        disabled={formData.isAnonymous}
+                      />
+                    </div>
 
-              {/* Image Upload */}
-              {(packageType === 'premium' || packageType === 'video' || packageType === 'featured') && (
-                <div>
-                  <Label htmlFor="image">
-                    {packageType === 'video' ? 'Video Upload' : 'Image Upload'} 
-                    {packageType !== 'video' && ' (Optional)'}
-                  </Label>
-                  <div className="mt-2">
-                    <div className="flex items-center justify-center w-full">
-                      <label
-                        htmlFor="image"
-                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-border/50 border-dashed rounded-lg cursor-pointer bg-background/30 hover:bg-background/50 transition-colors"
-                      >
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          {packageType === 'video' ? (
-                            <Video className="w-8 h-8 mb-4 text-muted-foreground" />
-                          ) : (
-                            <ImageIcon className="w-8 h-8 mb-4 text-muted-foreground" />
-                          )}
-                          <p className="mb-2 text-sm text-muted-foreground">
-                            <span className="font-semibold">Click to upload</span> or drag and drop
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {packageType === 'video' ? 'MP4, max 10 seconds' : 'PNG, JPG, GIF (max 5MB)'}
-                          </p>
-                        </div>
-                        <input
-                          id="image"
-                          type="file"
-                          className="hidden"
-                          accept={packageType === 'video' ? 'video/*' : 'image/*'}
-                          onChange={handleImageUpload}
-                        />
+                    {/* Anonymous */}
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="anonymous"
+                        checked={formData.isAnonymous}
+                        onCheckedChange={handleAnonymousChange}
+                        className="border-slate-600 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                      />
+                      <label htmlFor="anonymous" className="text-sm text-slate-300 cursor-pointer">
+                        Bury anonymously (your shame shall remain nameless)
                       </label>
                     </div>
-                    {image && (
-                      <p className="text-sm text-primary mt-2">
-                        ✓ {image.name} selected
-                      </p>
-                    )}
+
+                    {/* Submit */}
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold py-4 text-lg shadow-lg shadow-green-500/25 transform transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Burying Forever...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">⚰️</span>
+                          Bury Forever - ${packages.find(p => p.id === formData.package)?.price}
+                        </div>
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Preview */}
+            <div className="lg:col-span-1">
+              <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700/50 sticky top-8">
+                <CardHeader>
+                  <CardTitle className="text-lg text-slate-200 flex items-center gap-2">
+                    <span className="text-2xl">👁️</span>
+                    Burial Preview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">🪦</span>
+                        <Badge variant="secondary" className="text-xs bg-slate-700 text-slate-300">
+                          {formData.category || 'Category'}
+                        </Badge>
+                      </div>
+                      
+                      <h3 className="font-bold text-slate-200 mb-2">
+                        {formData.title || 'Your burial title will appear here...'}
+                      </h3>
+                      
+                      <div className="text-sm text-slate-400 mb-3">
+                        By {formData.isAnonymous ? 'Anonymous Soul' : (formData.author || 'Your Name')} • Just now
+                      </div>
+                      
+                      <div className="bg-slate-800/50 rounded p-3 border border-slate-700/30">
+                        <p className="text-slate-300 italic text-center">
+                          "{formData.epitaph || 'Your final words will echo here for eternity...'}"
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-700/30">
+                        <Button size="sm" variant="ghost" className="text-slate-400 text-xs">
+                          💀 0
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-slate-400 text-xs">
+                          🔥 0
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-slate-400 text-xs">
+                          😭 0
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="text-xs text-slate-500 text-center">
+                      This is how your burial will appear to the world
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {/* Anonymous Option */}
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="anonymous"
-                  checked={isAnonymous}
-                  onCheckedChange={setIsAnonymous}
-                />
-                <Label htmlFor="anonymous" className="text-sm">
-                  Bury anonymously (hide my email)
-                </Label>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Payment Summary */}
-          <Card className="bg-card/80 backdrop-blur-sm border-primary/30 ghost-glow">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Burial Summary</span>
-                <Badge className="bg-primary text-primary-foreground">
-                  ${selectedPackage?.price}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Package:</span>
-                  <span className="font-medium">{selectedPackage?.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Author:</span>
-                  <span className="font-medium">
-                    {isAnonymous ? 'Anonymous' : user?.email}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Category:</span>
-                  <span className="font-medium">{category || 'Not selected'}</span>
-                </div>
-                <div className="border-t border-border/50 pt-2 flex justify-between font-bold">
-                  <span>Total:</span>
-                  <span className="text-primary">${selectedPackage?.price}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Submit Button */}
-          <div className="text-center">
-            <Button
-              type="submit"
-              size="lg"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 px-12 py-4 text-lg ghost-glow"
-              disabled={loading}
-            >
-              {loading ? (
-                'Processing Burial...'
-              ) : (
-                <>
-                  💀 Pay ${selectedPackage?.price} & Bury Forever
-                </>
-              )}
-            </Button>
-            
-            <p className="text-xs text-muted-foreground mt-4">
-              By proceeding, you agree that this burial is permanent and cannot be undone.
-              <br />
-              All payments are final. No resurrections allowed.
-            </p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
