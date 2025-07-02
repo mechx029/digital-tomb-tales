@@ -1,148 +1,167 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
-import { User, LogOut, Menu, X } from 'lucide-react';
+import { User, Settings, LogOut, Skull, Crown, PlusCircle } from 'lucide-react';
 
 const Header = () => {
-  const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const { user, profile, signOut } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const handleAuthClick = () => {
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/auth');
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
-    setMobileMenuOpen(false);
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
-    <header className="bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 group">
-            <span className="text-2xl">💀</span>
-            <div className="font-creepster text-xl text-primary group-hover:glow-text transition-all duration-300">
-              Internet Graveyard
-            </div>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link to="/graveyard" className="text-foreground/80 hover:text-primary transition-colors">
-              Browse Graves
-            </Link>
-            {user ? (
-              <>
-                <Link to="/dashboard" className="text-foreground/80 hover:text-primary transition-colors">
-                  Dashboard
-                </Link>
-                <Link to="/bury" className="text-foreground/80 hover:text-primary transition-colors">
-                  🪦 Bury Something
-                </Link>
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm text-muted-foreground flex items-center">
-                    <User className="w-4 h-4 mr-1" />
-                    {user.email}
-                  </span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleSignOut}
-                    className="text-foreground/80 hover:text-accent"
-                  >
-                    <LogOut className="w-4 h-4 mr-1" />
-                    Sign Out
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center space-x-4">
-                <Link to="/login">
-                  <Button variant="ghost" className="text-foreground/80 hover:text-primary">
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/signup">
-                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-                    Join the Graveyard
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
+    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/50 backdrop-blur-sm">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        {/* Logo */}
+        <div 
+          className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => navigate('/')}
+        >
+          <span className="text-2xl">💀</span>
+          <span className="font-creepster text-xl text-primary glow-text">
+            The Internet Graveyard
+          </span>
         </div>
 
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 border-t border-border pt-4">
-            <nav className="flex flex-col space-y-4">
-              <Link 
-                to="/graveyard" 
-                className="text-foreground/80 hover:text-primary transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Browse Graves
-              </Link>
-              {user ? (
-                <>
-                  <Link 
-                    to="/dashboard" 
-                    className="text-foreground/80 hover:text-primary transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
-                  <Link 
-                    to="/bury" 
-                    className="text-foreground/80 hover:text-primary transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    🪦 Bury Something
-                  </Link>
-                  <div className="flex flex-col space-y-2 pt-2 border-t border-border">
-                    <span className="text-sm text-muted-foreground">
-                      Signed in as: {user.email}
-                    </span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={handleSignOut}
-                      className="text-accent hover:text-accent/80 justify-start p-0"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign Out
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col space-y-2">
-                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start text-foreground/80 hover:text-primary">
-                      Login
-                    </Button>
-                  </Link>
-                  <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
-                    <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                      Join the Graveyard
-                    </Button>
-                  </Link>
+        {/* Navigation */}
+        <nav className="hidden md:flex items-center space-x-6">
+          <Button
+            variant="ghost"
+            className={`hover:text-primary ${location.pathname === '/' ? 'text-primary' : ''}`}
+            onClick={() => navigate('/')}
+          >
+            Home
+          </Button>
+          <Button
+            variant="ghost"
+            className={`hover:text-primary ${location.pathname === '/graveyard' ? 'text-primary' : ''}`}
+            onClick={() => navigate('/graveyard')}
+          >
+            Browse Graves
+          </Button>
+          {user && (
+            <Button
+              variant="ghost"
+              className={`hover:text-primary ${location.pathname === '/bury' ? 'text-primary' : ''}`}
+              onClick={() => navigate('/bury')}
+            >
+              <PlusCircle className="w-4 h-4 mr-2" />
+              Bury Something
+            </Button>
+          )}
+        </nav>
+
+        {/* User Actions */}
+        <div className="flex items-center space-x-4">
+          {user ? (
+            <div className="flex items-center space-x-3">
+              {/* User Stats */}
+              {profile && (
+                <div className="hidden sm:flex items-center space-x-2">
+                  <Badge variant="outline" className="text-xs">
+                    <Skull className="w-3 h-3 mr-1" />
+                    {profile.total_burials || 0}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    🔥 {profile.total_reactions || 0}
+                  </Badge>
+                  {profile.level > 1 && (
+                    <Badge variant="outline" className="text-xs">
+                      <Crown className="w-3 h-3 mr-1" />
+                      Lvl {profile.level}
+                    </Badge>
+                  )}
                 </div>
               )}
-            </nav>
-          </div>
-        )}
+
+              {/* User Menu */}
+              <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile?.avatar_url} alt={profile?.display_name || 'User'} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {profile?.display_name 
+                          ? getInitials(profile.display_name)
+                          : user.email?.[0]?.toUpperCase() || 'U'
+                        }
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      <p className="font-medium">
+                        {profile?.display_name || 'Anonymous Grave Keeper'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        @{profile?.username || 'user'}
+                      </p>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Dashboard</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Profile Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/auth')}
+                className="text-muted-foreground hover:text-primary"
+              >
+                Sign In
+              </Button>
+              <Button
+                onClick={() => navigate('/auth')}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Join Graveyard
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

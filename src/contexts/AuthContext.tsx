@@ -1,18 +1,19 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  isAnonymous?: boolean;
-}
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
-  signUp: (email: string, password: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  session: Session | null;
+  profile: any | null;
+  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
+  updateProfile: (updates: any) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,62 +28,160 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Fetch user profile
+          setTimeout(async () => {
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+              setProfile(profile);
+            } catch (error) {
+              console.error('Error fetching profile:', error);
+            }
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+        
+        setLoading(false);
+      }
+    );
+
     // Check for existing session
-    const storedUser = localStorage.getItem('graveyard_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const redirectUrl = `${window.location.origin}/`;
       
-      const newUser = {
-        id: Math.random().toString(36).substr(2, 9),
+      const { error } = await supabase.auth.signUp({
         email,
-      };
+        password,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      });
       
-      setUser(newUser);
-      localStorage.setItem('graveyard_user', JSON.stringify(newUser));
-    } catch (error) {
-      throw new Error('Failed to create account');
+      if (error) {
+        toast.error(error.message);
+        return { error };
+      }
+      
+      toast.success('Check your email for verification link!');
+      return { error: null };
+    } catch (error: any) {
+      toast.error('Failed to create account');
+      return { error };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const existingUser = {
-        id: Math.random().toString(36).substr(2, 9),
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-      };
+        password,
+      });
       
-      setUser(existingUser);
-      localStorage.setItem('graveyard_user', JSON.stringify(existingUser));
-    } catch (error) {
-      throw new Error('Invalid credentials');
+      if (error) {
+        toast.error(error.message);
+        return { error };
+      }
+      
+      toast.success('Welcome back to the graveyard!');
+      return { error: null };
+    } catch (error: any) {
+      toast.error('Failed to sign in');
+      return { error };
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`
+        }
+      });
+      
+      if (error) {
+        toast.error(error.message);
+        return { error };
+      }
+      
+      return { error: null };
+    } catch (error: any) {
+      toast.error('Failed to sign in with Google');
+      return { error };
     }
   };
 
   const signOut = async () => {
-    setUser(null);
-    localStorage.removeItem('graveyard_user');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('Goodbye from the graveyard!');
+      }
+    } catch (error) {
+      toast.error('Failed to sign out');
+    }
+  };
+
+  const updateProfile = async (updates: any) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user?.id);
+      
+      if (error) {
+        toast.error(error.message);
+        return { error };
+      }
+      
+      // Update local profile state
+      setProfile(prev => ({ ...prev, ...updates }));
+      toast.success('Profile updated!');
+      return { error: null };
+    } catch (error: any) {
+      toast.error('Failed to update profile');
+      return { error };
+    }
   };
 
   const value = {
     user,
+    session,
+    profile,
     signUp,
     signIn,
+    signInWithGoogle,
     signOut,
     loading,
+    updateProfile,
   };
 
   return (

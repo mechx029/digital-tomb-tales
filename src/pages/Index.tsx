@@ -1,11 +1,10 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import StatsCounter from '@/components/StatsCounter';
+import LiveStatsCounter from '@/components/LiveStatsCounter';
 import GraveCard from '@/components/GraveCard';
 import { getTrendingGraves, getFeaturedGraves, getRecentGraves } from '@/data/mockGraves';
 import { ArrowRight, Share, Flame, Clock, Star } from 'lucide-react';
@@ -22,7 +21,7 @@ const Index = () => {
     if (user) {
       navigate('/bury');
     } else {
-      navigate('/signup');
+      navigate('/auth');
     }
   };
 
@@ -69,7 +68,7 @@ const Index = () => {
             </Button>
           </div>
           
-          <StatsCounter />
+          <LiveStatsCounter />
         </div>
       </section>
 
