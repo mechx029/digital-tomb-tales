@@ -1,236 +1,191 @@
 
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import StatsCounter from '@/components/StatsCounter';
-import GraveCard from '@/components/GraveCard';
-import { getTrendingGraves, getRecentGraves, getFeaturedGraves } from '@/data/mockGraves';
-import { Flame, Clock, Star, Plus, TrendingUp } from 'lucide-react';
+import { useUserGraves } from '@/hooks/useGraves';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Skull, Users, Flame, Edit, Trash2 } from 'lucide-react';
+import GraveGrid from '@/components/GraveGrid';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
+  const { user, profile } = useAuth();
+  const { graves, loading } = useUserGraves();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  
-  const [trendingGraves] = useState(getTrendingGraves(6));
-  const [recentGraves] = useState(getRecentGraves(6));
-  const [featuredGraves] = useState(getFeaturedGraves().slice(0, 3));
+  const [activeTab, setActiveTab] = useState('graves');
 
-  const handleGraveClick = (graveId: string) => {
-    navigate(`/grave/${graveId}`);
-  };
+  if (!user) {
+    navigate('/auth');
+    return null;
+  }
+
+  const totalReactions = graves.reduce((sum, grave) => sum + (grave._count?.reactions || 0), 0);
+  const topGrave = graves.sort((a, b) => (b._count?.reactions || 0) - (a._count?.reactions || 0))[0];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Animated background particles */}
+      {/* Animated background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-green-400/20 rounded-full animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 3}s`
-            }}
-          />
-        ))}
-        
-        {/* Floating spirits */}
-        {[...Array(5)].map((_, i) => (
-          <div
-            key={`spirit-${i}`}
-            className="absolute text-2xl opacity-10 animate-float"
-            style={{
-              left: `${Math.random() * 90}%`,
-              top: `${Math.random() * 80}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${8 + Math.random() * 4}s`
-            }}
-          >
-            👻
-          </div>
-        ))}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-500/5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500/5 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
 
       <div className="container mx-auto px-4 py-8 relative z-10">
-        {/* Welcome Header */}
-        <div className="text-center mb-12">
-          <div className="mb-6 relative">
-            <span className="text-7xl block mb-4 animate-bounce" style={{ animationDuration: '3s' }}>💀</span>
-            <div className="absolute -top-2 -left-8 text-3xl animate-float opacity-40">
-              ⚰️
-            </div>
-            <div className="absolute -top-4 -right-6 text-2xl animate-float opacity-30" style={{ animationDelay: '1s' }}>
-              🕯️
-            </div>
-          </div>
-          
-          <h1 className="font-creepster text-4xl md:text-6xl text-green-400 glow-text mb-4">
-            Welcome to the Graveyard
-          </h1>
-          <p className="text-xl text-slate-300 mb-6">
-            {user?.email ? `Welcome back, ${user.email}` : 'Welcome, lost soul'} 
-          </p>
-          <p className="text-slate-400 mb-8">
-            Where digital regrets come to rest in <span className="text-red-400 font-bold">eternal darkness</span>
-          </p>
+        {/* Profile Header */}
+        <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-sm border-slate-700/50 mb-8">
+          <CardHeader className="text-center py-8">
+            <div className="flex flex-col items-center space-y-4">
+              <Avatar className="w-24 h-24 border-4 border-green-500/30">
+                <AvatarImage src={profile?.avatar_url} />
+                <AvatarFallback className="bg-slate-700 text-slate-200 text-2xl">
+                  {profile?.display_name?.[0] || profile?.username?.[0] || '👻'}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div>
+                <h1 className="text-3xl font-bold text-slate-100 mb-2">
+                  {profile?.display_name || profile?.username}
+                </h1>
+                <p className="text-slate-400">@{profile?.username}</p>
+                {profile?.bio && (
+                  <p className="text-slate-300 mt-2 max-w-md">{profile.bio}</p>
+                )}
+              </div>
 
-          {/* CTA Button */}
-          <Button
-            size="lg"
-            className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold py-4 px-8 text-lg shadow-lg shadow-red-500/25 transform transition-all duration-300 hover:scale-110 mb-8"
-            onClick={() => navigate('/bury')}
-          >
-            <Plus className="w-6 h-6 mr-2" />
-            🪦 Bury Something Now
-          </Button>
-        </div>
-
-        {/* Live Stats */}
-        <StatsCounter />
-
-        {/* Featured Graves */}
-        {featuredGraves.length > 0 && (
-          <section className="mb-16">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-200 flex items-center gap-3">
-                <Star className="w-8 h-8 text-yellow-400 animate-pulse" />
-                <span className="bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
-                  Featured Graves
-                </span>
-              </h2>
               <Button
-                variant="ghost"
-                className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10"
-                onClick={() => navigate('/graveyard')}
+                variant="outline"
+                className="border-green-500/50 text-green-400 hover:bg-green-500/10"
+                onClick={() => navigate('/profile/edit')}
               >
-                View All →
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Profile
               </Button>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredGraves.map((grave, index) => (
-                <GraveCard
-                  key={grave.id}
-                  grave={grave}
-                  onClick={() => handleGraveClick(grave.id)}
-                  className="tombstone-rise"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                />
-              ))}
-            </div>
-          </section>
+          </CardHeader>
+        </Card>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="bg-slate-800/50 border-slate-700/50">
+            <CardContent className="p-6 text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Skull className="w-6 h-6 text-green-400" />
+                <span className="text-3xl font-bold text-green-400">
+                  {graves.length}
+                </span>
+              </div>
+              <p className="text-slate-400">Total Graves</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-slate-700/50">
+            <CardContent className="p-6 text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Flame className="w-6 h-6 text-red-400" />
+                <span className="text-3xl font-bold text-red-400">
+                  {totalReactions}
+                </span>
+              </div>
+              <p className="text-slate-400">Reactions Received</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-slate-700/50">
+            <CardContent className="p-6 text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Users className="w-6 h-6 text-blue-400" />
+                <span className="text-3xl font-bold text-blue-400">
+                  {profile?.level || 1}
+                </span>
+              </div>
+              <p className="text-slate-400">Level</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Top Grave */}
+        {topGrave && (
+          <Card className="bg-slate-800/50 border-slate-700/50 mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-slate-200">
+                <span className="text-2xl">👑</span>
+                Top Grave
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-slate-200 mb-1">{topGrave.title}</h3>
+                  <p className="text-sm text-slate-400 line-clamp-2">"{topGrave.epitaph}"</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-green-400">
+                    {topGrave._count?.reactions || 0}
+                  </div>
+                  <div className="text-xs text-slate-500">reactions</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Trending & Recent Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Trending Section */}
-          <section>
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-slate-200 flex items-center gap-3">
-                <Flame className="w-7 h-7 text-red-400 animate-pulse" />
-                <span className="bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
-                  Trending Graves
-                </span>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-3 bg-slate-800/50 border-slate-700">
+            <TabsTrigger value="graves" className="data-[state=active]:bg-green-600">
+              🪦 My Graves
+            </TabsTrigger>
+            <TabsTrigger value="reactions" className="data-[state=active]:bg-red-600">
+              💀 My Reactions
+            </TabsTrigger>
+            <TabsTrigger value="followers" className="data-[state=active]:bg-blue-600">
+              👻 Following
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="graves" className="mt-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-slate-200">
+                Your Digital Burials ({graves.length})
               </h2>
               <Button
-                variant="ghost"
-                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                onClick={() => navigate('/graveyard?sort=trending')}
+                onClick={() => navigate('/bury')}
+                className="bg-green-600 hover:bg-green-500"
               >
-                <TrendingUp className="w-4 h-4 mr-1" />
-                See All
+                Create New Grave
               </Button>
             </div>
             
-            <div className="space-y-6">
-              {trendingGraves.slice(0, 3).map((grave, index) => (
-                <GraveCard
-                  key={grave.id}
-                  grave={grave}
-                  onClick={() => handleGraveClick(grave.id)}
-                  className="tombstone-rise"
-                  style={{ animationDelay: `${index * 0.15}s` }}
-                />
-              ))}
-            </div>
-            
-            {trendingGraves.length === 0 && (
-              <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700/50 text-center py-12">
-                <CardContent>
-                  <span className="text-6xl mb-4 block opacity-50">💀</span>
-                  <p className="text-slate-400">No trending graves yet. Be the first to create viral content!</p>
-                </CardContent>
-              </Card>
-            )}
-          </section>
+            <GraveGrid graves={graves} loading={loading} />
+          </TabsContent>
 
-          {/* Recent Section */}
-          <section>
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-slate-200 flex items-center gap-3">
-                <Clock className="w-7 h-7 text-green-400 animate-pulse" />
-                <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                  Fresh Burials
-                </span>
-              </h2>
-              <Button
-                variant="ghost"
-                className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
-                onClick={() => navigate('/graveyard?sort=recent')}
-              >
-                <Clock className="w-4 h-4 mr-1" />
-                See All
-              </Button>
-            </div>
-            
-            <div className="space-y-6">
-              {recentGraves.slice(0, 3).map((grave, index) => (
-                <GraveCard
-                  key={grave.id}
-                  grave={grave}
-                  onClick={() => handleGraveClick(grave.id)}
-                  className="tombstone-rise"
-                  style={{ animationDelay: `${(index * 0.15) + 0.3}s` }}
-                />
-              ))}
-            </div>
-          </section>
-        </div>
+          <TabsContent value="reactions" className="mt-6">
+            <Card className="bg-slate-800/50 border-slate-700/50">
+              <CardContent className="p-8 text-center">
+                <span className="text-4xl block mb-4">🔥</span>
+                <h3 className="text-lg text-slate-300 mb-2">Reaction History</h3>
+                <p className="text-slate-500">
+                  Coming soon! Track all the graves you've reacted to.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Bottom CTA */}
-        <div className="text-center py-16 mt-16 border-t border-slate-700/30">
-          <h3 className="text-3xl font-bold text-slate-200 mb-4 flex items-center justify-center gap-3">
-            <span className="text-4xl animate-bounce">⚱️</span>
-            Ready to Bury Your Digital Shame?
-          </h3>
-          <p className="text-slate-400 mb-8 max-w-2xl mx-auto text-lg">
-            Join the thousands who have found peace through permanent digital burial. 
-            From $1, your regrets can rest in <span className="text-red-400 font-bold">eternal darkness</span>.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-bold py-4 px-8 text-lg shadow-lg shadow-purple-500/25 transform transition-all duration-300 hover:scale-105"
-              onClick={() => navigate('/bury')}
-            >
-              <span className="text-xl mr-2">🪦</span>
-              Start Digging Your Grave
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-slate-600 text-slate-300 hover:bg-slate-700/50 py-4 px-8 text-lg"
-              onClick={() => navigate('/graveyard')}
-            >
-              Browse All Graves
-            </Button>
-          </div>
-        </div>
+          <TabsContent value="followers" className="mt-6">
+            <Card className="bg-slate-800/50 border-slate-700/50">
+              <CardContent className="p-8 text-center">
+                <span className="text-4xl block mb-4">👥</span>
+                <h3 className="text-lg text-slate-300 mb-2">Social Features</h3>
+                <p className="text-slate-500">
+                  Follow system coming soon! Connect with other digital mourners.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

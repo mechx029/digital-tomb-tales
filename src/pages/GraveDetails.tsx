@@ -1,133 +1,188 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
-import { mockGraves, Grave } from '@/data/mockGraves';
-import { Share, ArrowLeft, MessageSquare, Send } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Share, ArrowLeft, Play } from 'lucide-react';
+import CommentSection from '@/components/CommentSection';
+
+interface GraveData {
+  id: string;
+  title: string;
+  epitaph: string;
+  category: string;
+  image_url?: string;
+  video_url?: string;
+  created_at: string;
+  featured: boolean;
+  package_type: string;
+  shares: number;
+  profiles: {
+    username: string;
+    display_name?: string;
+    avatar_url?: string;
+  };
+  reactions: Array<{
+    id: string;
+    reaction_type: 'skull' | 'fire' | 'crying' | 'clown';
+    user_id: string;
+  }>;
+}
 
 const GraveDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
-  const [grave, setGrave] = useState<Grave | null>(null);
-  const [reactions, setReactions] = useState({
+  const [grave, setGrave] = useState<GraveData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [reactionCounts, setReactionCounts] = useState({
     skull: 0,
     fire: 0,
     crying: 0,
     clown: 0
   });
-  const [hasReacted, setHasReacted] = useState<string | null>(null);
-  const [comment, setComment] = useState('');
-  const [comments, setComments] = useState<Array<{
-    id: string;
-    author: string;
-    content: string;
-    timestamp: string;
-  }>>([]);
+  const [userReaction, setUserReaction] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
-      const foundGrave = mockGraves.find(g => g.id === id);
-      if (foundGrave) {
-        setGrave(foundGrave);
-        setReactions(foundGrave.reactions);
-        // Mock comments
-        setComments([
-          {
-            id: '1',
-            author: 'DeepWeb_Digger',
-            content: 'RIP to another fallen dream 💀',
-            timestamp: '2 hours ago'
-          },
-          {
-            id: '2', 
-            author: 'Anonymous_Soul',
-            content: 'We\'ve all been there... may it rest in digital peace',
-            timestamp: '4 hours ago'
-          }
-        ]);
-      }
+      fetchGrave();
     }
-  }, [id]);
+  }, [id, user]);
 
-  const handleReaction = (type: keyof typeof reactions) => {
-    if (hasReacted === type) {
-      // Remove reaction
-      setReactions(prev => ({
-        ...prev,
-        [type]: prev[type] - 1
-      }));
-      setHasReacted(null);
-    } else {
-      // Add new reaction, remove old if exists
-      setReactions(prev => {
-        const newReactions = { ...prev };
-        if (hasReacted) {
-          newReactions[hasReacted] -= 1;
-        }
-        newReactions[type] += 1;
-        return newReactions;
-      });
-      setHasReacted(type);
-    }
-  };
-
-  const handleShare = async () => {
-    const url = window.location.href;
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `RIP: ${grave?.title}`,
-          text: grave?.epitaph,
-          url: url,
-        });
-      } catch (error) {
-        await copyToClipboard(url);
-      }
-    } else {
-      await copyToClipboard(url);
-    }
-  };
-
-  const copyToClipboard = async (text: string) => {
+  const fetchGrave = async () => {
     try {
-      await navigator.clipboard.writeText(text);
-      toast({
-        title: "Grave link copied! 💀",
-        description: "Share this digital burial with the world",
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('graves')
+        .select(`
+          *,
+          profiles!inner(username, display_name, avatar_url),
+          reactions(id, reaction_type, user_id)
+        `)
+        .eq('id', id)
+        .eq('published', true)
+        .single();
+
+      if (error) throw error;
+
+      setGrave(data);
+
+      // Calculate reaction counts
+      const counts = { skull: 0, fire: 0, crying: 0, clown: 0 };
+      let currentUserReaction = null;
+
+      data.reactions?.forEach((reaction: any) => {
+        counts[reaction.reaction_type as keyof typeof counts]++;
+        if (user && reaction.user_id === user.id) {
+          currentUserReaction = reaction.reaction_type;
+        }
       });
+
+      setReactionCounts(counts);
+      setUserReaction(currentUserReaction);
     } catch (error) {
+      console.error('Error fetching grave:', error);
+      setGrave(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReaction = async (type: 'skull' | 'fire' | 'crying' | 'clown') => {
+    if (!user || !grave) {
+      navigate('/auth');
+      return;
+    }
+
+    try {
+      if (userReaction === type) {
+        // Remove reaction
+        await supabase
+          .from('reactions')
+          .delete()
+          .eq('grave_id', grave.id)
+          .eq('user_id', user.id)
+          .eq('reaction_type', type);
+      } else {
+        // Remove existing reaction first, then add new one
+        await supabase
+          .from('reactions')
+          .delete()
+          .eq('grave_id', grave.id)
+          .eq('user_id', user.id);
+
+        await supabase
+          .from('reactions')
+          .insert({
+            grave_id: grave.id,
+            user_id: user.id,
+            reaction_type: type
+          });
+      }
+
+      // Refresh grave data
+      fetchGrave();
+    } catch (error) {
+      console.error('Error toggling reaction:', error);
       toast({
-        title: "Failed to copy link",
+        title: "Failed to react",
         description: "Please try again",
         variant: "destructive",
       });
     }
   };
 
-  const handleCommentSubmit = () => {
-    if (!comment.trim()) return;
+  const handleShare = async () => {
+    const url = window.location.href;
     
-    const newComment = {
-      id: Date.now().toString(),
-      author: 'You',
-      content: comment,
-      timestamp: 'just now'
-    };
-    
-    setComments(prev => [newComment, ...prev]);
-    setComment('');
-    toast({
-      title: "Memorial message added 🕯️",
-      description: "Your words have been etched in digital stone",
-    });
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `RIP: ${grave?.title}`,
+          text: grave?.epitaph,
+          url: url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast({
+          title: "Grave link copied! 💀",
+          description: "Share this digital burial with the world",
+        });
+      }
+
+      // Update share count
+      if (grave) {
+        await supabase
+          .from('graves')
+          .update({ shares: grave.shares + 1 })
+          .eq('id', grave.id);
+        
+        setGrave(prev => prev ? { ...prev, shares: prev.shares + 1 } : null);
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to share",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <span className="text-8xl block mb-4 animate-pulse">⚰️</span>
+          <p className="text-slate-400">Loading grave...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!grave) {
     return (
@@ -144,7 +199,7 @@ const GraveDetails = () => {
     );
   }
 
-  const totalReactions = Object.values(reactions).reduce((sum, count) => sum + count, 0);
+  const totalReactions = Object.values(reactionCounts).reduce((sum, count) => sum + count, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -181,18 +236,12 @@ const GraveDetails = () => {
           Back to Graveyard
         </Button>
 
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-8">
           {/* Main Grave Card */}
-          <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-sm border-slate-700/50 shadow-2xl mb-8">
+          <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-sm border-slate-700/50 shadow-2xl">
             <CardHeader className="text-center py-8">
               <div className="mb-6 relative">
                 <span className="text-8xl block mb-4 animate-pulse">🪦</span>
-                <div className="absolute -top-4 -left-8 text-4xl animate-float opacity-40">
-                  ⚰️
-                </div>
-                <div className="absolute -top-2 -right-6 text-3xl animate-float opacity-30" style={{ animationDelay: '1s' }}>
-                  🕯️
-                </div>
               </div>
               
               <div className="flex items-center justify-center gap-2 mb-4">
@@ -211,8 +260,10 @@ const GraveDetails = () => {
               </h1>
               
               <div className="text-slate-400 mb-6">
-                Buried by <span className="text-green-400 font-medium">{grave.author}</span> • 
-                <span className="ml-2">{new Date(grave.timestamp).toLocaleDateString('en-US', {
+                Buried by <span className="text-green-400 font-medium">
+                  {grave.profiles.display_name || grave.profiles.username}
+                </span> • 
+                <span className="ml-2">{new Date(grave.created_at).toLocaleDateString('en-US', {
                   month: 'long',
                   day: 'numeric',
                   year: 'numeric',
@@ -223,6 +274,29 @@ const GraveDetails = () => {
             </CardHeader>
 
             <CardContent className="pb-8">
+              {/* Media */}
+              {(grave.image_url || grave.video_url) && (
+                <div className="mb-8 rounded-lg overflow-hidden">
+                  {grave.image_url && (
+                    <img 
+                      src={grave.image_url}
+                      alt={grave.title}
+                      className="w-full max-h-96 object-cover"
+                    />
+                  )}
+                  {grave.video_url && (
+                    <video 
+                      src={grave.video_url}
+                      className="w-full max-h-96 object-cover"
+                      controls
+                      autoPlay
+                      muted
+                      loop
+                    />
+                  )}
+                </div>
+              )}
+
               {/* Epitaph */}
               <div className="relative p-8 bg-slate-800/50 rounded-lg border border-slate-700/30 mb-8">
                 <div className="absolute top-4 left-4 text-8xl opacity-10">"</div>
@@ -234,61 +308,27 @@ const GraveDetails = () => {
 
               {/* Reactions */}
               <div className="flex items-center justify-center gap-4 mb-8 flex-wrap">
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={`h-14 px-6 transition-all duration-300 transform hover:scale-110 ${
-                    hasReacted === 'skull' 
-                      ? 'bg-green-500/20 text-green-400 shadow-lg shadow-green-500/25' 
-                      : 'text-slate-400 hover:text-green-400 hover:bg-green-500/10'
-                  }`}
-                  onClick={() => handleReaction('skull')}
-                >
-                  <span className="text-2xl mr-2">💀</span>
-                  {reactions.skull}
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={`h-14 px-6 transition-all duration-300 transform hover:scale-110 ${
-                    hasReacted === 'fire' 
-                      ? 'bg-red-500/20 text-red-400 shadow-lg shadow-red-500/25' 
-                      : 'text-slate-400 hover:text-red-400 hover:bg-red-500/10'
-                  }`}
-                  onClick={() => handleReaction('fire')}
-                >
-                  <span className="text-2xl mr-2">🔥</span>
-                  {reactions.fire}
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={`h-14 px-6 transition-all duration-300 transform hover:scale-110 ${
-                    hasReacted === 'crying' 
-                      ? 'bg-blue-500/20 text-blue-400 shadow-lg shadow-blue-500/25' 
-                      : 'text-slate-400 hover:text-blue-400 hover:bg-blue-500/10'
-                  }`}
-                  onClick={() => handleReaction('crying')}
-                >
-                  <span className="text-2xl mr-2">😭</span>
-                  {reactions.crying}
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={`h-14 px-6 transition-all duration-300 transform hover:scale-110 ${
-                    hasReacted === 'clown' 
-                      ? 'bg-yellow-500/20 text-yellow-400 shadow-lg shadow-yellow-500/25' 
-                      : 'text-slate-400 hover:text-yellow-400 hover:bg-yellow-500/10'
-                  }`}
-                  onClick={() => handleReaction('clown')}
-                >
-                  <span className="text-2xl mr-2">🤡</span>
-                  {reactions.clown}
-                </Button>
+                {(['skull', 'fire', 'crying', 'clown'] as const).map((type) => {
+                  const emoji = { skull: '💀', fire: '🔥', crying: '😭', clown: '🤡' }[type];
+                  const isActive = userReaction === type;
+                  
+                  return (
+                    <Button
+                      key={type}
+                      variant="ghost"
+                      size="lg"
+                      className={`h-14 px-6 transition-all duration-300 transform hover:scale-110 ${
+                        isActive 
+                          ? 'bg-green-500/20 text-green-400 shadow-lg shadow-green-500/25' 
+                          : 'text-slate-400 hover:text-green-400 hover:bg-green-500/10'
+                      }`}
+                      onClick={() => handleReaction(type)}
+                    >
+                      <span className="text-2xl mr-2">{emoji}</span>
+                      {reactionCounts[type]}
+                    </Button>
+                  );
+                })}
               </div>
 
               {/* Stats & Share */}
@@ -317,55 +357,7 @@ const GraveDetails = () => {
           </Card>
 
           {/* Comments Section */}
-          <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700/50">
-            <CardHeader>
-              <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-3">
-                <MessageSquare className="w-6 h-6 text-blue-400" />
-                Memorial Messages ({comments.length})
-              </h2>
-            </CardHeader>
-            <CardContent>
-              {/* Add Comment */}
-              <div className="mb-8">
-                <Textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Leave a memorial message for this digital soul..."
-                  rows={3}
-                  className="bg-slate-900/50 border-slate-600 text-slate-200 placeholder-slate-500 focus:border-green-500 focus:ring-green-500/20 mb-4"
-                />
-                <Button
-                  onClick={handleCommentSubmit}
-                  disabled={!comment.trim()}
-                  className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  Add Memorial Message
-                </Button>
-              </div>
-
-              {/* Comments List */}
-              <div className="space-y-4">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="p-4 bg-slate-900/30 rounded-lg border border-slate-700/30">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-medium text-green-400">{comment.author}</span>
-                      <span className="text-xs text-slate-500">•</span>
-                      <span className="text-xs text-slate-500">{comment.timestamp}</span>
-                    </div>
-                    <p className="text-slate-300">{comment.content}</p>
-                  </div>
-                ))}
-                
-                {comments.length === 0 && (
-                  <div className="text-center py-8 text-slate-500">
-                    <span className="text-4xl block mb-2">🕯️</span>
-                    No memorial messages yet. Be the first to pay respects.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <CommentSection graveId={grave.id} />
         </div>
       </div>
     </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,27 +8,30 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Upload, DollarSign, Crown, Zap, Star } from 'lucide-react';
 import { categories } from '@/data/mockGraves';
+import MediaUpload from '@/components/MediaUpload';
 
 const BurySubmission = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [formData, setFormData] = useState({
     title: '',
     epitaph: '',
-    author: '',
     category: '',
-    isAnonymous: false,
-    package: 'basic',
+    package: 'basic' as 'basic' | 'premium' | 'video' | 'featured',
   });
   
+  const [media, setMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const packages = [
     {
-      id: 'basic',
+      id: 'basic' as const,
       name: 'Basic Burial',
       price: 1,
       icon: '⚰️',
@@ -38,7 +40,7 @@ const BurySubmission = () => {
       bgColor: 'hover:bg-green-500/5'
     },
     {
-      id: 'premium',
+      id: 'premium' as const,
       name: 'Premium Memorial',
       price: 3,
       icon: '📸',
@@ -47,7 +49,7 @@ const BurySubmission = () => {
       bgColor: 'hover:bg-blue-500/5'
     },
     {
-      id: 'video',
+      id: 'video' as const,
       name: 'Video Burial',
       price: 5,
       icon: '🎬',
@@ -56,7 +58,7 @@ const BurySubmission = () => {
       bgColor: 'hover:bg-purple-500/5'
     },
     {
-      id: 'featured',
+      id: 'featured' as const,
       name: 'Featured Grave',
       price: 10,
       icon: '👑',
@@ -70,6 +72,16 @@ const BurySubmission = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!user) {
+      toast({
+        title: "Authentication required! 💀",
+        description: "Please sign in to bury your digital regrets.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
     if (!formData.title || !formData.epitaph || !formData.category) {
       toast({
         title: "Incomplete burial! 💀",
@@ -81,18 +93,76 @@ const BurySubmission = () => {
 
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const selectedPackage = packages.find(p => p.id === formData.package);
-    
-    toast({
-      title: "🪦 Burial Complete!",
-      description: `Your digital regret has been buried forever for $${selectedPackage?.price}. May it rest in peace.`,
-    });
-    
-    setIsSubmitting(false);
-    navigate('/graveyard');
+    try {
+      // Create the grave in database
+      const graveData = {
+        title: formData.title,
+        epitaph: formData.epitaph,
+        category: formData.category,
+        package_type: formData.package,
+        user_id: user.id,
+        image_url: media?.type === 'image' ? media.url : null,
+        video_url: media?.type === 'video' ? media.url : null,
+        published: false, // Will be published after payment confirmation
+        payment_confirmed: formData.package === 'basic' // Basic package doesn't require payment
+      };
+
+      const { data: grave, error } = await supabase
+        .from('graves')
+        .insert(graveData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const selectedPackage = packages.find(p => p.id === formData.package);
+      
+      if (formData.package === 'basic') {
+        // Basic package - publish immediately
+        await supabase
+          .from('graves')
+          .update({ published: true })
+          .eq('id', grave.id);
+
+        toast({
+          title: "🪦 Burial Complete!",
+          description: `Your digital regret has been buried forever. May it rest in peace.`,
+        });
+        
+        navigate('/graveyard');
+      } else {
+        // Other packages - redirect to payment (to be implemented)
+        toast({
+          title: "🪦 Grave Created!",
+          description: `Your grave is ready for burial. Payment processing coming soon!`,
+        });
+        
+        // For now, publish immediately (remove when payment is implemented)
+        await supabase
+          .from('graves')
+          .update({ published: true, payment_confirmed: true })
+          .eq('id', grave.id);
+        
+        navigate('/graveyard');
+      }
+    } catch (error) {
+      console.error('Error creating grave:', error);
+      toast({
+        title: "Burial failed! 💀",
+        description: "Failed to bury your digital regret. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleMediaUpload = (url: string, type: 'image' | 'video') => {
+    if (url) {
+      setMedia({ url, type });
+    } else {
+      setMedia(null);
+    }
   };
 
   const handleAnonymousChange = (checked: boolean) => {
@@ -264,6 +334,18 @@ const BurySubmission = () => {
                       </label>
                     </div>
 
+                    {/* Media Upload Section */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Media Upload
+                      </label>
+                      <MediaUpload
+                        packageType={formData.package}
+                        onMediaUpload={handleMediaUpload}
+                        currentMedia={media}
+                      />
+                    </div>
+
                     {/* Submit */}
                     <Button
                       type="submit"
@@ -311,11 +393,30 @@ const BurySubmission = () => {
                       </h3>
                       
                       <div className="text-sm text-slate-400 mb-3">
-                        By {formData.isAnonymous ? 'Anonymous Soul' : (formData.author || 'Your Name')} • Just now
+                        By {user?.email?.split('@')[0] || 'Anonymous'} • Just now
                       </div>
+
+                      {/* Media Preview */}
+                      {media && (
+                        <div className="mb-3 rounded overflow-hidden">
+                          {media.type === 'image' ? (
+                            <img 
+                              src={media.url} 
+                              alt="Upload preview"
+                              className="w-full h-24 object-cover"
+                            />
+                          ) : (
+                            <video 
+                              src={media.url}
+                              className="w-full h-24 object-cover"
+                              muted
+                            />
+                          )}
+                        </div>
+                      )}
                       
                       <div className="bg-slate-800/50 rounded p-3 border border-slate-700/30">
-                        <p className="text-slate-300 italic text-center">
+                        <p className="text-slate-300 italic text-center text-sm">
                           "{formData.epitaph || 'Your final words will echo here for eternity...'}"
                         </p>
                       </div>
