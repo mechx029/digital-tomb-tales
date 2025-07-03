@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { mockGraves } from '@/data/mockGraves';
 
 export interface Grave {
   id: string;
@@ -100,7 +101,53 @@ export const useGraves = (sortBy: 'newest' | 'popular' | 'category' = 'newest') 
 
       if (error) throw error;
 
-      // Process reaction counts
+      // If no real data exists, use mock data
+      if (!data || data.length === 0) {
+        console.log('No real graves found, using mock data');
+        const processedMockGraves = mockGraves.map(grave => ({
+          ...grave,
+          profiles: {
+            username: grave.author.toLowerCase().replace(/\s+/g, '_'),
+            display_name: grave.author,
+            avatar_url: null
+          },
+          reactions: Object.entries(grave.reactions).flatMap(([type, count]) => 
+            Array(count).fill(null).map((_, index) => ({
+              id: `mock_${grave.id}_${type}_${index}`,
+              reaction_type: type as 'skull' | 'fire' | 'crying' | 'clown',
+              user_id: `mock_user_${index}`
+            }))
+          ),
+          _count: {
+            reactions: Object.values(grave.reactions).reduce((sum, count) => sum + count, 0),
+            comments: Math.floor(Math.random() * 20)
+          },
+          user_id: 'mock_user',
+          published: true,
+          image_url: null,
+          video_url: null
+        }));
+
+        // Apply sorting to mock data
+        let sortedMockGraves = [...processedMockGraves];
+        switch (sortBy) {
+          case 'newest':
+            sortedMockGraves.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            break;
+          case 'popular':
+            sortedMockGraves.sort((a, b) => (b._count?.reactions || 0) - (a._count?.reactions || 0));
+            break;
+          case 'category':
+            sortedMockGraves.sort((a, b) => a.category.localeCompare(b.category));
+            break;
+        }
+
+        setGraves(sortedMockGraves);
+        setError(null);
+        return;
+      }
+
+      // Process real data
       const processedGraves = data?.map(grave => ({
         ...grave,
         _count: {
@@ -114,6 +161,33 @@ export const useGraves = (sortBy: 'newest' | 'popular' | 'category' = 'newest') 
     } catch (err) {
       console.error('Error fetching graves:', err);
       setError('Failed to load graves');
+      
+      // Fallback to mock data on error
+      const processedMockGraves = mockGraves.map(grave => ({
+        ...grave,
+        profiles: {
+          username: grave.author.toLowerCase().replace(/\s+/g, '_'),
+          display_name: grave.author,
+          avatar_url: null
+        },
+        reactions: Object.entries(grave.reactions).flatMap(([type, count]) => 
+          Array(count).fill(null).map((_, index) => ({
+            id: `mock_${grave.id}_${type}_${index}`,
+            reaction_type: type as 'skull' | 'fire' | 'crying' | 'clown',
+            user_id: `mock_user_${index}`
+          }))
+        ),
+        _count: {
+          reactions: Object.values(grave.reactions).reduce((sum, count) => sum + count, 0),
+          comments: Math.floor(Math.random() * 20)
+        },
+        user_id: 'mock_user',
+        published: true,
+        image_url: null,
+        video_url: null
+      }));
+
+      setGraves(processedMockGraves);
     } finally {
       setLoading(false);
     }
