@@ -3,10 +3,12 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useGraves } from '@/hooks/useGraves';
+import { useRealTimeGraves } from '@/hooks/useRealTimeGraves';
 import { useAuth } from '@/contexts/AuthContext';
 import GraveGrid from '@/components/GraveGrid';
-import { Filter, Plus } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import NetworkStatus from '@/components/NetworkStatus';
+import { Filter, Plus, Wifi, WifiOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Graveyard = () => {
@@ -15,9 +17,7 @@ const Graveyard = () => {
   const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'category'>('newest');
   const [activeTab, setActiveTab] = useState('all');
   
-  const { graves, loading, toggleReaction } = useGraves(sortBy);
-
-  console.log('Graveyard - graves loaded:', graves.length, 'loading:', loading);
+  const { graves, loading, error, isOnline, toggleReaction } = useRealTimeGraves(sortBy);
 
   const featuredGraves = graves.filter(grave => grave.featured);
   const regularGraves = graves.filter(grave => !grave.featured);
@@ -30,8 +30,21 @@ const Graveyard = () => {
     toggleReaction(graveId, type);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" className="mx-auto mb-4" />
+          <p className="text-slate-400">Loading graveyard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <NetworkStatus />
+      
       {/* Animated background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-500/5 rounded-full blur-3xl animate-pulse" />
@@ -73,9 +86,16 @@ const Graveyard = () => {
           <p className="text-slate-400 mb-2">
             Browse the eternal resting place of our collective digital shame
           </p>
-          <p className="text-green-400 text-sm animate-pulse">
-            🔴 {graves.length} souls currently resting • Live updates
+          <p className="text-green-400 text-sm flex items-center justify-center gap-2">
+            {isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+            🔴 {graves.length} souls currently resting • Live updates {isOnline ? 'active' : 'paused'}
           </p>
+
+          {error && (
+            <div className="mt-4 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8">
             <Button
@@ -129,7 +149,7 @@ const Graveyard = () => {
                 
                 <GraveGrid 
                   graves={featuredGraves} 
-                  loading={loading}
+                  loading={false}
                   onReaction={handleReaction}
                 />
               </div>
@@ -146,7 +166,7 @@ const Graveyard = () => {
               
               <GraveGrid 
                 graves={regularGraves} 
-                loading={loading}
+                loading={false}
                 onReaction={handleReaction}
               />
             </div>
@@ -163,7 +183,7 @@ const Graveyard = () => {
             </div>
             <GraveGrid 
               graves={featuredGraves} 
-              loading={loading}
+              loading={false}
               onReaction={handleReaction}
             />
           </TabsContent>
@@ -178,8 +198,8 @@ const Graveyard = () => {
               <p className="text-slate-400 mt-2">The hottest digital disasters going viral right now</p>
             </div>
             <GraveGrid 
-              graves={graves.slice(0, 12)} // Top 12 most recent/popular
-              loading={loading}
+              graves={graves.slice(0, 12)} 
+              loading={false}
               onReaction={handleReaction}
             />
           </TabsContent>
@@ -204,8 +224,8 @@ const Graveyard = () => {
         {graves.length > 0 && (
           <div className="fixed bottom-6 right-6 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg p-3 text-xs text-slate-300">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span>Live updates active</span>
+              <div className={`w-2 h-2 rounded-full animate-pulse ${isOnline ? 'bg-green-400' : 'bg-red-400'}`}></div>
+              <span>{isOnline ? 'Live updates active' : 'Offline mode'}</span>
             </div>
           </div>
         )}
