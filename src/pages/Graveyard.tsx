@@ -17,6 +17,8 @@ const Graveyard = () => {
   
   const { graves, loading, toggleReaction } = useGraves(sortBy);
 
+  console.log('Graveyard - graves loaded:', graves.length, 'loading:', loading);
+
   const featuredGraves = graves.filter(grave => grave.featured);
   const regularGraves = graves.filter(grave => !grave.featured);
 
@@ -36,7 +38,7 @@ const Graveyard = () => {
         <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500/5 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
         
         {/* Floating tombstones */}
-        {[...Array(12)].map((_, i) => (
+        {[...Array(15)].map((_, i) => (
           <div
             key={i}
             className="absolute text-2xl opacity-10 animate-float"
@@ -68,11 +70,14 @@ const Graveyard = () => {
           <p className="text-xl text-slate-300 mb-2">
             Where digital dreams come to <span className="text-red-400 font-bold">die</span>
           </p>
-          <p className="text-slate-400 mb-8">
+          <p className="text-slate-400 mb-2">
             Browse the eternal resting place of our collective digital shame
           </p>
+          <p className="text-green-400 text-sm animate-pulse">
+            🔴 {graves.length} souls currently resting • Live updates
+          </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8">
             <Button
               onClick={() => navigate('/bury')}
               className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold px-8 py-3 text-lg shadow-lg shadow-green-500/25 transform transition-all duration-300 hover:scale-105"
@@ -88,7 +93,7 @@ const Graveyard = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-800 border-slate-700">
-                  <SelectItem value="newest">🕐 Newest</SelectItem>
+                  <SelectItem value="newest">🕐 Newest First</SelectItem>
                   <SelectItem value="popular">🔥 Most Viral</SelectItem>
                   <SelectItem value="category">📂 By Category</SelectItem>
                 </SelectContent>
@@ -101,10 +106,10 @@ const Graveyard = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
           <TabsList className="grid w-full grid-cols-3 bg-slate-800/50 border-slate-700 max-w-md mx-auto">
             <TabsTrigger value="all" className="data-[state=active]:bg-green-600">
-              🪦 All Graves
+              🪦 All Graves ({graves.length})
             </TabsTrigger>
             <TabsTrigger value="featured" className="data-[state=active]:bg-red-600">
-              👑 Featured
+              👑 Featured ({featuredGraves.length})
             </TabsTrigger>
             <TabsTrigger value="trending" className="data-[state=active]:bg-orange-600">
               🔥 Trending
@@ -116,9 +121,10 @@ const Graveyard = () => {
             {featuredGraves.length > 0 && (
               <div className="mb-12">
                 <div className="flex items-center gap-3 mb-6">
-                  <span className="text-3xl">👑</span>
+                  <span className="text-3xl animate-pulse">👑</span>
                   <h2 className="text-2xl font-bold text-slate-200">Featured Graves</h2>
                   <div className="flex-1 h-px bg-gradient-to-r from-red-500/50 to-transparent"></div>
+                  <span className="text-sm text-slate-400">{featuredGraves.length} featured</span>
                 </div>
                 
                 <GraveGrid 
@@ -135,6 +141,7 @@ const Graveyard = () => {
                 <span className="text-3xl">🪦</span>
                 <h2 className="text-2xl font-bold text-slate-200">Recent Burials</h2>
                 <div className="flex-1 h-px bg-gradient-to-r from-green-500/50 to-transparent"></div>
+                <span className="text-sm text-slate-400">{regularGraves.length} graves</span>
               </div>
               
               <GraveGrid 
@@ -146,6 +153,14 @@ const Graveyard = () => {
           </TabsContent>
 
           <TabsContent value="featured" className="mt-8">
+            <div className="mb-6">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl animate-pulse">👑</span>
+                <h2 className="text-2xl font-bold text-slate-200">Hall of Shame</h2>
+                <div className="flex-1 h-px bg-gradient-to-r from-red-500/50 to-transparent"></div>
+              </div>
+              <p className="text-slate-400 mt-2">The most legendary digital failures of all time</p>
+            </div>
             <GraveGrid 
               graves={featuredGraves} 
               loading={loading}
@@ -154,8 +169,16 @@ const Graveyard = () => {
           </TabsContent>
 
           <TabsContent value="trending" className="mt-8">
+            <div className="mb-6">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl animate-bounce">🔥</span>
+                <h2 className="text-2xl font-bold text-slate-200">Trending Now</h2>
+                <div className="flex-1 h-px bg-gradient-to-r from-orange-500/50 to-transparent"></div>
+              </div>
+              <p className="text-slate-400 mt-2">The hottest digital disasters going viral right now</p>
+            </div>
             <GraveGrid 
-              graves={graves.slice(0, 9)} // Top 9 for now
+              graves={graves.slice(0, 12)} // Top 12 most recent/popular
               loading={loading}
               onReaction={handleReaction}
             />
@@ -165,15 +188,25 @@ const Graveyard = () => {
         {/* Empty State */}
         {!loading && graves.length === 0 && (
           <div className="text-center py-20">
-            <span className="text-8xl block mb-6">👻</span>
+            <span className="text-8xl block mb-6 animate-pulse">👻</span>
             <h3 className="text-2xl text-slate-300 mb-4">The graveyard is empty...</h3>
-            <p className="text-slate-400 mb-8">Be the first to bury something shameful!</p>
+            <p className="text-slate-400 mb-8">Be the first brave soul to bury something shameful!</p>
             <Button
               onClick={() => navigate('/bury')}
               className="bg-green-600 hover:bg-green-500 px-8 py-3"
             >
               Create First Grave
             </Button>
+          </div>
+        )}
+
+        {/* Real-time activity indicator */}
+        {graves.length > 0 && (
+          <div className="fixed bottom-6 right-6 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg p-3 text-xs text-slate-300">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span>Live updates active</span>
+            </div>
           </div>
         )}
       </div>

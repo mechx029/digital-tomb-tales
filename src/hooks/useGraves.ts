@@ -40,170 +40,80 @@ export const useGraves = (sortBy: 'newest' | 'popular' | 'category' = 'newest') 
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
+  const processMockGraves = () => {
+    console.log('Processing mock graves, total:', mockGraves.length);
+    
+    const processedMockGraves = mockGraves.map(grave => ({
+      id: grave.id,
+      title: grave.title,
+      epitaph: grave.epitaph,
+      category: grave.category,
+      image_url: null,
+      video_url: null,
+      user_id: 'mock_user',
+      created_at: grave.timestamp,
+      updated_at: grave.timestamp,
+      published: true,
+      featured: grave.featured,
+      package_type: grave.packageType as 'basic' | 'premium' | 'video' | 'featured',
+      shares: grave.shares,
+      profiles: {
+        username: grave.author.toLowerCase().replace(/\s+/g, '_'),
+        display_name: grave.author,
+        avatar_url: null
+      },
+      reactions: Object.entries(grave.reactions).flatMap(([type, count]) => 
+        Array(count).fill(null).map((_, index) => ({
+          id: `mock_${grave.id}_${type}_${index}`,
+          reaction_type: type as 'skull' | 'fire' | 'crying' | 'clown',
+          user_id: `mock_user_${index}`
+        }))
+      ),
+      _count: {
+        reactions: Object.values(grave.reactions).reduce((sum, count) => sum + count, 0),
+        comments: Math.floor(Math.random() * 20)
+      }
+    }));
+
+    // Apply sorting to mock data
+    let sortedMockGraves = [...processedMockGraves];
+    switch (sortBy) {
+      case 'newest':
+        sortedMockGraves.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case 'popular':
+        sortedMockGraves.sort((a, b) => (b._count?.reactions || 0) - (a._count?.reactions || 0));
+        break;
+      case 'category':
+        sortedMockGraves.sort((a, b) => a.category.localeCompare(b.category));
+        break;
+    }
+
+    console.log('Processed graves:', sortedMockGraves.length);
+    return sortedMockGraves;
+  };
+
   useEffect(() => {
     fetchGraves();
-
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('graves-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'graves'
-        },
-        () => fetchGraves()
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'reactions'
-        },
-        () => fetchGraves()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [sortBy]);
 
   const fetchGraves = async () => {
     try {
       setLoading(true);
-      let query = supabase
-        .from('graves')
-        .select(`
-          *,
-          profiles!inner(username, display_name, avatar_url),
-          reactions(id, reaction_type, user_id)
-        `)
-        .eq('published', true);
-
-      // Apply sorting
-      switch (sortBy) {
-        case 'newest':
-          query = query.order('created_at', { ascending: false });
-          break;
-        case 'popular':
-          // This would need a computed field or view in production
-          query = query.order('created_at', { ascending: false });
-          break;
-        case 'category':
-          query = query.order('category').order('created_at', { ascending: false });
-          break;
-      }
-
-      const { data, error } = await query.limit(50);
-
-      if (error) throw error;
-
-      // If no real data exists, use mock data
-      if (!data || data.length === 0) {
-        console.log('No real graves found, using mock data');
-        const processedMockGraves = mockGraves.map(grave => ({
-          id: grave.id,
-          title: grave.title,
-          epitaph: grave.epitaph,
-          category: grave.category,
-          image_url: null,
-          video_url: null,
-          user_id: 'mock_user',
-          created_at: grave.timestamp,
-          updated_at: grave.timestamp,
-          published: true,
-          featured: grave.featured,
-          package_type: grave.packageType as 'basic' | 'premium' | 'video' | 'featured',
-          shares: grave.shares,
-          profiles: {
-            username: grave.author.toLowerCase().replace(/\s+/g, '_'),
-            display_name: grave.author,
-            avatar_url: null
-          },
-          reactions: Object.entries(grave.reactions).flatMap(([type, count]) => 
-            Array(count).fill(null).map((_, index) => ({
-              id: `mock_${grave.id}_${type}_${index}`,
-              reaction_type: type as 'skull' | 'fire' | 'crying' | 'clown',
-              user_id: `mock_user_${index}`
-            }))
-          ),
-          _count: {
-            reactions: Object.values(grave.reactions).reduce((sum, count) => sum + count, 0),
-            comments: Math.floor(Math.random() * 20)
-          }
-        }));
-
-        // Apply sorting to mock data
-        let sortedMockGraves = [...processedMockGraves];
-        switch (sortBy) {
-          case 'newest':
-            sortedMockGraves.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-            break;
-          case 'popular':
-            sortedMockGraves.sort((a, b) => (b._count?.reactions || 0) - (a._count?.reactions || 0));
-            break;
-          case 'category':
-            sortedMockGraves.sort((a, b) => a.category.localeCompare(b.category));
-            break;
-        }
-
-        setGraves(sortedMockGraves);
-        setError(null);
-        return;
-      }
-
-      // Process real data
-      const processedGraves = data?.map(grave => ({
-        ...grave,
-        _count: {
-          reactions: grave.reactions?.length || 0,
-          comments: 0 // Will be added when we implement comments
-        }
-      })) || [];
-
+      console.log('Fetching graves...');
+      
+      // Always use mock data for now since we want to show the fake data
+      const processedGraves = processMockGraves();
       setGraves(processedGraves);
       setError(null);
+      console.log('Set graves:', processedGraves.length);
     } catch (err) {
       console.error('Error fetching graves:', err);
       setError('Failed to load graves');
       
       // Fallback to mock data on error
-      const processedMockGraves = mockGraves.map(grave => ({
-        id: grave.id,
-        title: grave.title,
-        epitaph: grave.epitaph,
-        category: grave.category,
-        image_url: null,
-        video_url: null,
-        user_id: 'mock_user',
-        created_at: grave.timestamp,
-        updated_at: grave.timestamp,
-        published: true,
-        featured: grave.featured,
-        package_type: grave.packageType as 'basic' | 'premium' | 'video' | 'featured',
-        shares: grave.shares,
-        profiles: {
-          username: grave.author.toLowerCase().replace(/\s+/g, '_'),
-          display_name: grave.author,
-          avatar_url: null
-        },
-        reactions: Object.entries(grave.reactions).flatMap(([type, count]) => 
-          Array(count).fill(null).map((_, index) => ({
-            id: `mock_${grave.id}_${type}_${index}`,
-            reaction_type: type as 'skull' | 'fire' | 'crying' | 'clown',
-            user_id: `mock_user_${index}`
-          }))
-        ),
-        _count: {
-          reactions: Object.values(grave.reactions).reduce((sum, count) => sum + count, 0),
-          comments: Math.floor(Math.random() * 20)
-        }
-      }));
-
-      setGraves(processedMockGraves);
+      const processedGraves = processMockGraves();
+      setGraves(processedGraves);
     } finally {
       setLoading(false);
     }
@@ -213,40 +123,44 @@ export const useGraves = (sortBy: 'newest' | 'popular' | 'category' = 'newest') 
     if (!user) return;
 
     try {
-      // Check if user already reacted with this type
-      const { data: existingReaction } = await supabase
-        .from('reactions')
-        .select('id')
-        .eq('grave_id', graveId)
-        .eq('user_id', user.id)
-        .eq('reaction_type', reactionType)
-        .single();
-
-      if (existingReaction) {
-        // Remove reaction
-        await supabase
-          .from('reactions')
-          .delete()
-          .eq('id', existingReaction.id);
-      } else {
-        // Add reaction (remove any existing different reactions first)
-        await supabase
-          .from('reactions')
-          .delete()
-          .eq('grave_id', graveId)
-          .eq('user_id', user.id);
-
-        await supabase
-          .from('reactions')
-          .insert({
-            grave_id: graveId,
-            user_id: user.id,
-            reaction_type: reactionType
-          });
-      }
-
-      // Refresh graves to get updated counts
-      fetchGraves();
+      // For mock data, just simulate the reaction toggle
+      setGraves(prevGraves => 
+        prevGraves.map(grave => {
+          if (grave.id === graveId) {
+            const existingReaction = grave.reactions.find(r => r.user_id === user.id && r.reaction_type === reactionType);
+            
+            if (existingReaction) {
+              // Remove reaction
+              return {
+                ...grave,
+                reactions: grave.reactions.filter(r => r.id !== existingReaction.id),
+                _count: {
+                  ...grave._count,
+                  reactions: (grave._count?.reactions || 0) - 1
+                }
+              };
+            } else {
+              // Add reaction
+              return {
+                ...grave,
+                reactions: [
+                  ...grave.reactions,
+                  {
+                    id: `${graveId}_${user.id}_${reactionType}`,
+                    reaction_type: reactionType,
+                    user_id: user.id
+                  }
+                ],
+                _count: {
+                  ...grave._count,
+                  reactions: (grave._count?.reactions || 0) + 1
+                }
+              };
+            }
+          }
+          return grave;
+        })
+      );
     } catch (error) {
       console.error('Error toggling reaction:', error);
     }
