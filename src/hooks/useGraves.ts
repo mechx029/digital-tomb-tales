@@ -105,7 +105,19 @@ export const useGraves = (sortBy: 'newest' | 'popular' | 'category' = 'newest') 
       if (!data || data.length === 0) {
         console.log('No real graves found, using mock data');
         const processedMockGraves = mockGraves.map(grave => ({
-          ...grave,
+          id: grave.id,
+          title: grave.title,
+          epitaph: grave.epitaph,
+          category: grave.category,
+          image_url: null,
+          video_url: null,
+          user_id: 'mock_user',
+          created_at: grave.timestamp,
+          updated_at: grave.timestamp,
+          published: true,
+          featured: grave.featured,
+          package_type: grave.packageType as 'basic' | 'premium' | 'video' | 'featured',
+          shares: grave.shares,
           profiles: {
             username: grave.author.toLowerCase().replace(/\s+/g, '_'),
             display_name: grave.author,
@@ -121,18 +133,14 @@ export const useGraves = (sortBy: 'newest' | 'popular' | 'category' = 'newest') 
           _count: {
             reactions: Object.values(grave.reactions).reduce((sum, count) => sum + count, 0),
             comments: Math.floor(Math.random() * 20)
-          },
-          user_id: 'mock_user',
-          published: true,
-          image_url: null,
-          video_url: null
+          }
         }));
 
         // Apply sorting to mock data
         let sortedMockGraves = [...processedMockGraves];
         switch (sortBy) {
           case 'newest':
-            sortedMockGraves.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            sortedMockGraves.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
             break;
           case 'popular':
             sortedMockGraves.sort((a, b) => (b._count?.reactions || 0) - (a._count?.reactions || 0));
@@ -164,7 +172,19 @@ export const useGraves = (sortBy: 'newest' | 'popular' | 'category' = 'newest') 
       
       // Fallback to mock data on error
       const processedMockGraves = mockGraves.map(grave => ({
-        ...grave,
+        id: grave.id,
+        title: grave.title,
+        epitaph: grave.epitaph,
+        category: grave.category,
+        image_url: null,
+        video_url: null,
+        user_id: 'mock_user',
+        created_at: grave.timestamp,
+        updated_at: grave.timestamp,
+        published: true,
+        featured: grave.featured,
+        package_type: grave.packageType as 'basic' | 'premium' | 'video' | 'featured',
+        shares: grave.shares,
         profiles: {
           username: grave.author.toLowerCase().replace(/\s+/g, '_'),
           display_name: grave.author,
@@ -180,11 +200,7 @@ export const useGraves = (sortBy: 'newest' | 'popular' | 'category' = 'newest') 
         _count: {
           reactions: Object.values(grave.reactions).reduce((sum, count) => sum + count, 0),
           comments: Math.floor(Math.random() * 20)
-        },
-        user_id: 'mock_user',
-        published: true,
-        image_url: null,
-        video_url: null
+        }
       }));
 
       setGraves(processedMockGraves);
