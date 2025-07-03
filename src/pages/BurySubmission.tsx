@@ -24,6 +24,8 @@ const BurySubmission = () => {
     epitaph: '',
     category: '',
     package: 'basic' as 'basic' | 'premium' | 'video' | 'featured',
+    author: '',
+    isAnonymous: false
   });
   
   const [media, setMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
@@ -393,7 +395,7 @@ const BurySubmission = () => {
                       </h3>
                       
                       <div className="text-sm text-slate-400 mb-3">
-                        By {user?.email?.split('@')[0] || 'Anonymous'} • Just now
+                        By {formData.isAnonymous ? 'Anonymous' : (formData.author || user?.email?.split('@')[0] || 'Anonymous')} • Just now
                       </div>
 
                       {/* Media Preview */}

@@ -75,7 +75,14 @@ export const useComments = (graveId: string) => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setComments(data || []);
+      
+      // Transform the data to match our Comment interface
+      const transformedComments = data?.map(comment => ({
+        ...comment,
+        reactions: comment.comment_reactions || []
+      })) || [];
+      
+      setComments(transformedComments);
     } catch (error) {
       console.error('Error fetching comments:', error);
     } finally {
