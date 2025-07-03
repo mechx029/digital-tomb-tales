@@ -1,14 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skull, Users, Flame, Heart } from 'lucide-react';
+import { getTotalGraves, getTotalUsers, getTotalReactions, getActiveBurials } from '@/data/mockGraves';
 
 const LiveStatsCounter = () => {
   const [stats, setStats] = useState({
-    totalGraves: 0,
-    totalUsers: 0,
-    totalReactions: 0,
-    activeBurials: 0
+    totalGraves: getTotalGraves(),
+    totalUsers: getTotalUsers(), 
+    totalReactions: getTotalReactions(),
+    activeBurials: getActiveBurials()
   });
 
   useEffect(() => {
@@ -38,14 +38,16 @@ const LiveStatsCounter = () => {
           .eq('published', true)
           .gte('created_at', yesterday);
 
+        // Use Supabase data if available, otherwise keep mock data
         setStats({
-          totalGraves: gravesCount || 0,
-          totalUsers: usersCount || 0,
-          totalReactions: reactionsCount || 0,
-          activeBurials: recentCount || 0
+          totalGraves: gravesCount || getTotalGraves(),
+          totalUsers: usersCount || getTotalUsers(),
+          totalReactions: reactionsCount || getTotalReactions(),
+          activeBurials: recentCount || getActiveBurials()
         });
       } catch (error) {
         console.error('Error fetching stats:', error);
+        // Keep using mock data on error
       }
     };
 
