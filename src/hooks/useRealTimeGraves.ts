@@ -61,7 +61,7 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
       setLoading(true);
       setError(null);
 
-      console.log('Fetching graves from Supabase...');
+      console.log('Fetching all graves from Supabase...');
       
       let query = supabase
         .from('graves')
@@ -85,18 +85,18 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
           break;
       }
 
-      const { data: realGraves, error: supabaseError } = await query;
+      const { data: fetchedGraves, error: supabaseError } = await query;
 
       if (supabaseError) {
         console.error('Supabase error:', supabaseError);
         throw supabaseError;
       }
 
-      if (realGraves && realGraves.length > 0) {
-        console.log(`Successfully fetched ${realGraves.length} graves from Supabase`);
+      if (fetchedGraves) {
+        console.log(`Successfully fetched ${fetchedGraves.length} graves from Supabase`);
         
-        // Process real data with reaction counts
-        const processedGraves = realGraves.map(grave => ({
+        // Process graves with reaction counts
+        const processedGraves = fetchedGraves.map(grave => ({
           ...grave,
           _count: {
             reactions: grave.reactions?.length || 0,
@@ -125,44 +125,6 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
       setLoading(false);
     }
   }, [sortBy, isOnline, toast]);
-
-  // Real-time subscription
-  useEffect(() => {
-    fetchGraves();
-
-    // Set up real-time subscription for live updates
-    const channel = supabase
-      .channel('graves-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'graves',
-        },
-        (payload) => {
-          console.log('Real-time grave update:', payload);
-          fetchGraves(); // Refetch on any change
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'reactions',
-        },
-        (payload) => {
-          console.log('Real-time reaction update:', payload);
-          fetchGraves(); // Refetch on reaction changes
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchGraves]);
 
   // Optimistic reaction toggle
   const toggleReaction = useCallback(async (graveId: string, reactionType: 'skull' | 'fire' | 'crying' | 'clown') => {
@@ -243,6 +205,44 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
       });
     }
   }, [user, fetchGraves, toast]);
+
+  // Real-time subscription and initial fetch
+  useEffect(() => {
+    fetchGraves();
+
+    // Set up real-time subscription for live updates
+    const channel = supabase
+      .channel('graves-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'graves',
+        },
+        (payload) => {
+          console.log('Real-time grave update:', payload);
+          fetchGraves(); // Refetch on any change
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reactions',
+        },
+        (payload) => {
+          console.log('Real-time reaction update:', payload);
+          fetchGraves(); // Refetch on reaction changes
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchGraves]);
 
   // Auto-refresh every 30 seconds for fresh data
   useEffect(() => {

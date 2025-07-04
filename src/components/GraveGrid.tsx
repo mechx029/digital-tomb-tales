@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Play, Share } from 'lucide-react';
-import { Grave } from '@/hooks/useGraves';
+import { Grave } from '@/hooks/useRealTimeGraves';
 import { useToast } from '@/hooks/use-toast';
 
 interface GraveGridProps {
@@ -39,11 +39,6 @@ const GraveGrid: React.FC<GraveGridProps> = ({ graves, loading, onReaction }) =>
 
   const getReactionCount = (grave: Grave, type: 'skull' | 'fire' | 'crying' | 'clown') => {
     return grave.reactions?.filter(r => r.reaction_type === type).length || 0;
-  };
-
-  const hasUserReacted = (grave: Grave, type: 'skull' | 'fire' | 'crying' | 'clown', userId?: string) => {
-    if (!userId) return false;
-    return grave.reactions?.some(r => r.reaction_type === type && r.user_id === userId) || false;
   };
 
   if (loading) {

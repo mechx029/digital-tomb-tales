@@ -21,7 +21,7 @@ const Graveyard = () => {
 
   const featuredGraves = graves.filter(grave => grave.featured);
   const regularGraves = graves.filter(grave => !grave.featured);
-  const trendingGraves = graves.sort((a, b) => (b._count?.reactions || 0) - (a._count?.reactions || 0)).slice(0, 12);
+  const trendingGraves = [...graves].sort((a, b) => (b._count?.reactions || 0) - (a._count?.reactions || 0)).slice(0, 12);
 
   const handleReaction = (graveId: string, type: 'skull' | 'fire' | 'crying' | 'clown') => {
     if (!user) {
