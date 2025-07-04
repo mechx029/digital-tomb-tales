@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockGraves } from '@/data/mockGraves';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Grave {
@@ -57,117 +56,81 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
     };
   }, []);
 
-  const processMockGraves = useCallback(() => {
-    const processedMockGraves = mockGraves.map(grave => ({
-      id: grave.id,
-      title: grave.title,
-      epitaph: grave.epitaph,
-      category: grave.category,
-      image_url: null,
-      video_url: null,
-      user_id: 'mock_user',
-      created_at: grave.timestamp,
-      updated_at: grave.timestamp,
-      published: true,
-      featured: grave.featured,
-      package_type: grave.packageType as 'basic' | 'premium' | 'video' | 'featured',
-      shares: grave.shares,
-      profiles: {
-        username: grave.author.toLowerCase().replace(/\s+/g, '_'),
-        display_name: grave.author,
-        avatar_url: null
-      },
-      reactions: Object.entries(grave.reactions).flatMap(([type, count]) => 
-        Array(count).fill(null).map((_, index) => ({
-          id: `mock_${grave.id}_${type}_${index}`,
-          reaction_type: type as 'skull' | 'fire' | 'crying' | 'clown',
-          user_id: `mock_user_${index}`
-        }))
-      ),
-      _count: {
-        reactions: Object.values(grave.reactions).reduce((sum, count) => sum + count, 0),
-        comments: Math.floor(Math.random() * 20)
-      }
-    }));
-
-    // Apply sorting
-    let sortedGraves = [...processedMockGraves];
-    switch (sortBy) {
-      case 'newest':
-        sortedGraves.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        break;
-      case 'popular':
-        sortedGraves.sort((a, b) => (b._count?.reactions || 0) - (a._count?.reactions || 0));
-        break;
-      case 'category':
-        sortedGraves.sort((a, b) => a.category.localeCompare(b.category));
-        break;
-    }
-
-    return sortedGraves;
-  }, [sortBy]);
-
   const fetchGraves = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Try to fetch from Supabase first
-      const { data: realGraves, error: supabaseError } = await supabase
+      console.log('Fetching graves from Supabase...');
+      
+      let query = supabase
         .from('graves')
         .select(`
           *,
           profiles!inner(username, display_name, avatar_url),
           reactions(id, reaction_type, user_id)
         `)
-        .eq('published', true)
-        .order('created_at', { ascending: sortBy !== 'newest' });
+        .eq('published', true);
+
+      // Apply sorting
+      switch (sortBy) {
+        case 'newest':
+          query = query.order('created_at', { ascending: false });
+          break;
+        case 'popular':
+          query = query.order('shares', { ascending: false });
+          break;
+        case 'category':
+          query = query.order('category', { ascending: true });
+          break;
+      }
+
+      const { data: realGraves, error: supabaseError } = await query;
 
       if (supabaseError) {
-        console.warn('Supabase error, falling back to mock data:', supabaseError);
+        console.error('Supabase error:', supabaseError);
         throw supabaseError;
       }
 
       if (realGraves && realGraves.length > 0) {
-        // Process real data
+        console.log(`Successfully fetched ${realGraves.length} graves from Supabase`);
+        
+        // Process real data with reaction counts
         const processedGraves = realGraves.map(grave => ({
           ...grave,
           _count: {
             reactions: grave.reactions?.length || 0,
-            comments: Math.floor(Math.random() * 20)
+            comments: Math.floor(Math.random() * 20) // Simulated for now
           }
         }));
+        
         setGraves(processedGraves);
       } else {
-        // Fallback to mock data
-        const mockData = processMockGraves();
-        setGraves(mockData);
+        console.warn('No graves found in database');
+        setGraves([]);
       }
     } catch (err) {
       console.error('Error fetching graves:', err);
       setError('Failed to load graves');
-      
-      // Always fallback to mock data on error
-      const mockData = processMockGraves();
-      setGraves(mockData);
+      setGraves([]);
       
       if (isOnline) {
         toast({
           title: "Connection Issue",
-          description: "Showing cached content. Trying to reconnect...",
-          variant: "default",
+          description: "Unable to load graves. Please try refreshing the page.",
+          variant: "destructive",
         });
       }
     } finally {
       setLoading(false);
     }
-  }, [sortBy, processMockGraves, isOnline, toast]);
+  }, [sortBy, isOnline, toast]);
 
   // Real-time subscription
   useEffect(() => {
     fetchGraves();
 
-    // Set up real-time subscription
+    // Set up real-time subscription for live updates
     const channel = supabase
       .channel('graves-realtime')
       .on(
@@ -178,7 +141,7 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
           table: 'graves',
         },
         (payload) => {
-          console.log('Real-time update:', payload);
+          console.log('Real-time grave update:', payload);
           fetchGraves(); // Refetch on any change
         }
       )
@@ -190,7 +153,7 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
           table: 'reactions',
         },
         (payload) => {
-          console.log('Reaction update:', payload);
+          console.log('Real-time reaction update:', payload);
           fetchGraves(); // Refetch on reaction changes
         }
       )

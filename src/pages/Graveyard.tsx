@@ -21,6 +21,7 @@ const Graveyard = () => {
 
   const featuredGraves = graves.filter(grave => grave.featured);
   const regularGraves = graves.filter(grave => !grave.featured);
+  const trendingGraves = graves.sort((a, b) => (b._count?.reactions || 0) - (a._count?.reactions || 0)).slice(0, 12);
 
   const handleReaction = (graveId: string, type: 'skull' | 'fire' | 'crying' | 'clown') => {
     if (!user) {
@@ -35,7 +36,8 @@ const Graveyard = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner size="lg" className="mx-auto mb-4" />
-          <p className="text-slate-400">Loading graveyard...</p>
+          <p className="text-slate-400">Loading the digital graveyard...</p>
+          <p className="text-slate-500 text-sm mt-2">Summoning digital spirits...</p>
         </div>
       </div>
     );
@@ -132,7 +134,7 @@ const Graveyard = () => {
               👑 Featured ({featuredGraves.length})
             </TabsTrigger>
             <TabsTrigger value="trending" className="data-[state=active]:bg-orange-600">
-              🔥 Trending
+              🔥 Trending ({trendingGraves.length})
             </TabsTrigger>
           </TabsList>
 
@@ -142,7 +144,7 @@ const Graveyard = () => {
               <div className="mb-12">
                 <div className="flex items-center gap-3 mb-6">
                   <span className="text-3xl animate-pulse">👑</span>
-                  <h2 className="text-2xl font-bold text-slate-200">Featured Graves</h2>
+                  <h2 className="text-2xl font-bold text-slate-200">Hall of Shame</h2>
                   <div className="flex-1 h-px bg-gradient-to-r from-red-500/50 to-transparent"></div>
                   <span className="text-sm text-slate-400">{featuredGraves.length} featured</span>
                 </div>
@@ -198,7 +200,7 @@ const Graveyard = () => {
               <p className="text-slate-400 mt-2">The hottest digital disasters going viral right now</p>
             </div>
             <GraveGrid 
-              graves={graves.slice(0, 12)} 
+              graves={trendingGraves} 
               loading={false}
               onReaction={handleReaction}
             />
@@ -210,12 +212,12 @@ const Graveyard = () => {
           <div className="text-center py-20">
             <span className="text-8xl block mb-6 animate-pulse">👻</span>
             <h3 className="text-2xl text-slate-300 mb-4">The graveyard is empty...</h3>
-            <p className="text-slate-400 mb-8">Be the first brave soul to bury something shameful!</p>
+            <p className="text-slate-400 mb-8">Something went wrong loading the graves. Try refreshing the page.</p>
             <Button
-              onClick={() => navigate('/bury')}
+              onClick={() => window.location.reload()}
               className="bg-green-600 hover:bg-green-500 px-8 py-3"
             >
-              Create First Grave
+              Refresh Graveyard
             </Button>
           </div>
         )}
