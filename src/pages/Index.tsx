@@ -14,7 +14,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { graves, loading, toggleReaction } = useRealTimeGraves('newest');
-  const { stats, loading: statsLoading } = useRealTimeStats();
+  const { stats } = useRealTimeStats();
 
   // Get recent graves for the feed (limit to 6 for homepage)
   const recentGraves = graves.slice(0, 6);
@@ -78,7 +78,7 @@ const Index = () => {
             <CardContent className="p-4">
               <Skull className="w-8 h-8 text-green-400 mx-auto mb-2" />
               <div className="text-2xl font-bold text-green-400">
-                {statsLoading ? '...' : stats.totalGraves}
+                {stats.totalGraves}
               </div>
               <div className="text-sm text-slate-400">Souls Buried</div>
             </CardContent>
@@ -88,7 +88,7 @@ const Index = () => {
             <CardContent className="p-4">
               <Users className="w-8 h-8 text-blue-400 mx-auto mb-2" />
               <div className="text-2xl font-bold text-blue-400">
-                {statsLoading ? '...' : stats.totalUsers}
+                {stats.totalUsers}
               </div>
               <div className="text-sm text-slate-400">Gravekeepers</div>
             </CardContent>
@@ -98,7 +98,7 @@ const Index = () => {
             <CardContent className="p-4">
               <Zap className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
               <div className="text-2xl font-bold text-yellow-400">
-                {statsLoading ? '...' : stats.totalReactions}
+                {stats.totalReactions}
               </div>
               <div className="text-sm text-slate-400">Reactions</div>
             </CardContent>
@@ -108,7 +108,7 @@ const Index = () => {
             <CardContent className="p-4">
               <TrendingUp className="w-8 h-8 text-red-400 mx-auto mb-2" />
               <div className="text-2xl font-bold text-red-400">
-                {statsLoading ? '...' : stats.activeBurials}
+                {stats.activeBurials}
               </div>
               <div className="text-sm text-slate-400">Active Burials</div>
             </CardContent>
