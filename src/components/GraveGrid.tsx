@@ -18,6 +18,8 @@ const GraveGrid: React.FC<GraveGridProps> = ({ graves, loading, onReaction }) =>
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  console.log('GraveGrid received graves:', graves);
+
   const handleShare = async (grave: Grave, e: React.MouseEvent) => {
     e.stopPropagation();
     const url = `${window.location.origin}/grave/${grave.id}`;
@@ -61,7 +63,7 @@ const GraveGrid: React.FC<GraveGridProps> = ({ graves, loading, onReaction }) =>
     );
   }
 
-  if (graves.length === 0) {
+  if (!graves || graves.length === 0) {
     return (
       <div className="text-center py-12">
         <span className="text-6xl block mb-4">👻</span>
@@ -102,7 +104,7 @@ const GraveGrid: React.FC<GraveGridProps> = ({ graves, loading, onReaction }) =>
             </div>
             
             <div className="text-sm text-slate-400 flex items-center gap-2">
-              <span>By {grave.profiles.display_name || grave.profiles.username}</span>
+              <span>By {grave.profiles?.display_name || grave.profiles?.username || 'Anonymous'}</span>
               <span>•</span>
               <span>{new Date(grave.created_at).toLocaleDateString()}</span>
             </div>
@@ -168,7 +170,7 @@ const GraveGrid: React.FC<GraveGridProps> = ({ graves, loading, onReaction }) =>
             {/* Actions */}
             <div className="flex items-center justify-between border-t border-slate-700/30 pt-3">
               <div className="text-xs text-slate-400">
-                {grave._count?.reactions || 0} reactions • {grave.shares} shares
+                {grave._count?.reactions || 0} reactions • {grave.shares || 0} shares
               </div>
               
               <Button

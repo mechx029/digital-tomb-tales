@@ -1,227 +1,185 @@
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from 'react-router-dom';
-import { Skull, Zap, Crown, Users } from 'lucide-react';
-import LiveStatsCounter from '@/components/LiveStatsCounter';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useRealTimeGraves } from '@/hooks/useRealTimeGraves';
+import { useRealTimeStats } from '@/hooks/useRealTimeStats';
+import { useAuth } from '@/contexts/AuthContext';
+import GraveGrid from '@/components/GraveGrid';
+import { Skull, TrendingUp, Users, Zap } from 'lucide-react';
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { graves, loading, toggleReaction } = useRealTimeGraves('newest');
+  const { stats, loading: statsLoading } = useRealTimeStats();
+
+  // Get recent graves for the feed (limit to 6 for homepage)
+  const recentGraves = graves.slice(0, 6);
+  
+  // Get trending graves (most reactions)
+  const trendingGraves = [...graves]
+    .sort((a, b) => (b._count?.reactions || 0) - (a._count?.reactions || 0))
+    .slice(0, 3);
+
+  const handleReaction = (graveId: string, type: 'skull' | 'fire' | 'crying' | 'clown') => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    toggleReaction(graveId, type);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Animated background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-500/5 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500/5 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
-        
-        {/* Floating spirits */}
-        {[...Array(12)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute text-2xl opacity-10 animate-float"
-            style={{
-              left: `${Math.random() * 90}%`,
-              top: `${Math.random() * 80}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${6 + Math.random() * 4}s`
-            }}
-          >
-            {['💀', '👻', '⚰️', '🕯️'][Math.floor(Math.random() * 4)]}
-          </div>
-        ))}
       </div>
 
-      <div className="container mx-auto px-4 py-12 relative z-10">
+      <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Hero Section */}
-        <div className="text-center mb-16">
-          <div className="mb-8 relative">
-            <span className="text-8xl md:text-9xl block mb-6 animate-bounce" style={{ animationDuration: '3s' }}>
-              ⚰️
-            </span>
-            {/* Floating spirits animation */}
-            <div className="absolute -top-6 -left-12 text-5xl opacity-20 animate-float">
-              👻
-            </div>
-            <div className="absolute -bottom-8 -right-12 text-6xl opacity-20 animate-float" style={{ animationDelay: '1s' }}>
-              🕯️
-            </div>
+        <div className="text-center mb-12">
+          <div className="mb-6">
+            <span className="text-8xl block mb-4 animate-bounce">💀</span>
+            <h1 className="text-6xl font-creepster text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-purple-500 to-red-500 mb-4 glow-text">
+              The Internet Graveyard
+            </h1>
+            <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+              Where digital regrets come to rest in peace. Bury your failed startups, cringe DMs, and questionable life choices.
+            </p>
           </div>
-          
-          <h1 className="font-creepster text-4xl md:text-7xl lg:text-8xl text-green-400 glow-text mb-6 leading-tight">
-            The Internet Graveyard
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-slate-300 mb-4 max-w-3xl mx-auto leading-relaxed">
-            Where digital dreams come to <span className="text-red-400 font-bold animate-pulse">die</span>
-          </p>
-          
-          <p className="text-lg text-slate-400 mb-12 max-w-2xl mx-auto">
-            Bury your digital shame, failed projects, and dead memes in our eternal graveyard. 
-            Share your digital regrets with the world and let them rest in peace forever.
-          </p>
 
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Button
+              size="lg"
               onClick={() => navigate('/bury')}
-              className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold px-12 py-4 text-xl shadow-lg shadow-green-500/25 transform transition-all duration-300 hover:scale-105 hover:shadow-green-500/40"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-8 py-3 text-lg font-semibold shadow-lg transform hover:scale-105 transition-all duration-300"
             >
-              <span className="text-2xl mr-3">⚰️</span>
-              Bury Something
+              🪦 Bury Something
             </Button>
-            
             <Button
-              onClick={() => navigate('/graveyard')}
+              size="lg"
               variant="outline"
-              className="border-slate-600 text-slate-300 hover:bg-slate-800/50 hover:border-slate-500 px-8 py-4 text-lg backdrop-blur-sm"
+              onClick={() => navigate('/graveyard')}
+              className="border-green-500/50 text-green-400 hover:bg-green-500/10 px-8 py-3 text-lg font-semibold transform hover:scale-105 transition-all duration-300"
             >
-              <span className="text-xl mr-2">🪦</span>
-              Explore Graveyard
+              👻 Explore Graves
             </Button>
           </div>
-
-          {/* Live Stats - Updated every few seconds */}
-          <div className="mb-16">
-            <LiveStatsCounter />
-          </div>
         </div>
 
-        {/* Features Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-          <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm text-center hover:border-green-500/30 transition-all duration-300">
-            <CardContent className="p-8">
-              <div className="text-5xl text-green-400 mb-4 animate-pulse">
-                <Skull />
+        {/* Stats Section */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+          <Card className="bg-slate-800/50 border-slate-700/50 text-center">
+            <CardContent className="p-4">
+              <Skull className="w-8 h-8 text-green-400 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-green-400">
+                {statsLoading ? '...' : stats.totalGraves}
               </div>
-              <h3 className="text-xl font-bold text-slate-200 mb-2">
-                Eternal Resting Place
-              </h3>
-              <p className="text-slate-400">
-                Bury your digital regrets forever. No take-backs, bestie.
-              </p>
+              <div className="text-sm text-slate-400">Souls Buried</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm text-center hover:border-yellow-500/30 transition-all duration-300">
-            <CardContent className="p-8">
-              <div className="text-5xl text-yellow-400 mb-4 animate-pulse">
-                <Zap />
+          <Card className="bg-slate-800/50 border-slate-700/50 text-center">
+            <CardContent className="p-4">
+              <Users className="w-8 h-8 text-blue-400 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-blue-400">
+                {statsLoading ? '...' : stats.totalUsers}
               </div>
-              <h3 className="text-xl font-bold text-slate-200 mb-2">
-                Share Your Shame
-              </h3>
-              <p className="text-slate-400">
-                Let the world witness your digital demise. The internet never forgets.
-              </p>
+              <div className="text-sm text-slate-400">Gravekeepers</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm text-center hover:border-red-500/30 transition-all duration-300">
-            <CardContent className="p-8">
-              <div className="text-5xl text-red-400 mb-4 animate-pulse">
-                <Crown />
+          <Card className="bg-slate-800/50 border-slate-700/50 text-center">
+            <CardContent className="p-4">
+              <Zap className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-yellow-400">
+                {statsLoading ? '...' : stats.totalReactions}
               </div>
-              <h3 className="text-xl font-bold text-slate-200 mb-2">
-                Become a Legend
-              </h3>
-              <p className="text-slate-400">
-                The most viral burials live on in infamy. Touch grass was never an option.
-              </p>
+              <div className="text-sm text-slate-400">Reactions</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-slate-700/50 text-center">
+            <CardContent className="p-4">
+              <TrendingUp className="w-8 h-8 text-red-400 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-red-400">
+                {statsLoading ? '...' : stats.activeBurials}
+              </div>
+              <div className="text-sm text-slate-400">Active Burials</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Recent Activity Feed */}
-        <div className="max-w-4xl mx-auto mb-16">
-          <h2 className="font-creepster text-4xl text-green-400 glow-text mb-8 text-center">
-            Recent Digital Deaths
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="bg-slate-800/30 border-slate-700/50 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-2xl">💀</span>
-                  <span className="text-green-400 font-semibold">@CryptoRegretQueen</span>
-                  <span className="text-slate-500 text-sm">2min ago</span>
-                </div>
-                <p className="text-slate-300 italic">
-                  "Just buried my NFT collection. Paid 50 ETH, now worth 0.001 ETH. The math ain't mathing."
-                </p>
-                <div className="flex gap-4 mt-3 text-sm text-slate-400">
-                  <span>💀 2.3K</span>
-                  <span>🔥 892</span>
-                  <span>😭 5.1K</span>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Trending Graves Section */}
+        {trendingGraves.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-2">
+                <span className="text-3xl">🔥</span>
+                Trending Graves
+              </h2>
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/graveyard')}
+                className="text-green-400 hover:text-green-300"
+              >
+                View All →
+              </Button>
+            </div>
+            <GraveGrid 
+              graves={trendingGraves} 
+              loading={loading}
+              onReaction={handleReaction}
+            />
+          </section>
+        )}
 
-            <Card className="bg-slate-800/30 border-slate-700/50 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-2xl">👻</span>
-                  <span className="text-purple-400 font-semibold">@MainCharacterFail</span>
-                  <span className="text-slate-500 text-sm">5min ago</span>
-                </div>
-                <p className="text-slate-300 italic">
-                  "My 'healing era' lasted exactly 47 minutes. Currently crying to Taylor Swift again."
-                </p>
-                <div className="flex gap-4 mt-3 text-sm text-slate-400">
-                  <span>💀 1.8K</span>
-                  <span>🔥 456</span>
-                  <span>😭 3.2K</span>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Recent Graves Section */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-2">
+              <span className="text-3xl">⏰</span>
+              Recent Burials
+            </h2>
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/graveyard')}
+              className="text-green-400 hover:text-green-300"
+            >
+              View All →
+            </Button>
           </div>
-        </div>
+          <GraveGrid 
+            graves={recentGraves} 
+            loading={loading}
+            onReaction={handleReaction}
+          />
+        </section>
 
-        {/* Testimonials */}
-        <div className="max-w-4xl mx-auto text-center mb-16">
-          <h2 className="font-creepster text-4xl text-green-400 glow-text mb-8">
-            What People Are Saying
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
-              <CardContent className="p-8">
-                <div className="text-xl text-slate-300 italic mb-4">
-                  "Finally, a place to bury my crypto losses in peace. The community here gets it."
-                </div>
-                <div className="text-slate-400">
-                  - @Web3_Lamenter
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
-              <CardContent className="p-8">
-                <div className="text-xl text-slate-300 italic mb-4">
-                  "Buried my entire Duolingo streak here. The owl will never find me now."
-                </div>
-                <div className="text-slate-400">
-                  - @LinguisticFailure
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Call to Action */}
+        {/* CTA Section */}
         <div className="text-center">
-          <h2 className="font-creepster text-4xl text-green-400 glow-text mb-8">
-            Ready to Bury Your Regrets?
-          </h2>
-          <p className="text-lg text-slate-400 mb-8">
-            Join thousands of others who've found peace in our digital cemetery
-          </p>
-          <Button
-            onClick={() => navigate('/bury')}
-            className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold px-12 py-4 text-xl shadow-lg shadow-green-500/25 transform transition-all duration-300 hover:scale-105"
-          >
-            Bury Something Now
-          </Button>
+          <Card className="bg-gradient-to-r from-slate-800/50 to-slate-900/50 border-slate-700/50 p-8">
+            <CardContent>
+              <h3 className="text-2xl font-bold text-slate-200 mb-4">
+                Ready to bury your digital shame?
+              </h3>
+              <p className="text-slate-400 mb-6">
+                Join thousands of others in laying their regrets to rest
+              </p>
+              <Button
+                size="lg"
+                onClick={() => navigate('/bury')}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500"
+              >
+                Start Digging 🪦
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

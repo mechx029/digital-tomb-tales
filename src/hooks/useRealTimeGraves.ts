@@ -92,6 +92,8 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
         throw supabaseError;
       }
 
+      console.log('Raw data from Supabase:', fetchedGraves);
+
       if (fetchedGraves) {
         console.log(`Successfully fetched ${fetchedGraves.length} graves from Supabase`);
         
@@ -104,6 +106,7 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
           }
         }));
         
+        console.log('Processed graves:', processedGraves);
         setGraves(processedGraves);
       } else {
         console.warn('No graves found in database');
