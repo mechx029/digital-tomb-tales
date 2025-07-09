@@ -61,8 +61,18 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
       setLoading(true);
       setError(null);
 
-      console.log('Fetching all graves from Supabase...');
+      console.log('🔍 Starting to fetch graves from Supabase...');
       
+      // First, let's check what data exists in the graves table
+      const { data: allGravesCheck, error: checkError } = await supabase
+        .from('graves')
+        .select('id, title, published')
+        .limit(10);
+      
+      console.log('📊 All graves check (first 10):', allGravesCheck);
+      if (checkError) console.error('❌ Check error:', checkError);
+
+      // Main query with proper joins
       let query = supabase
         .from('graves')
         .select(`
@@ -85,35 +95,48 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
           break;
       }
 
+      console.log('🚀 Executing main graves query...');
       const { data: fetchedGraves, error: supabaseError } = await query;
 
       if (supabaseError) {
-        console.error('Supabase error:', supabaseError);
+        console.error('❌ Supabase error:', supabaseError);
         throw supabaseError;
       }
 
-      console.log('Raw data from Supabase:', fetchedGraves);
+      console.log('✅ Raw graves data from Supabase:', fetchedGraves);
+      console.log('📈 Number of graves fetched:', fetchedGraves?.length || 0);
 
-      if (fetchedGraves) {
-        console.log(`Successfully fetched ${fetchedGraves.length} graves from Supabase`);
-        
+      if (fetchedGraves && fetchedGraves.length > 0) {
         // Process graves with reaction counts
-        const processedGraves = fetchedGraves.map(grave => ({
-          ...grave,
-          _count: {
-            reactions: grave.reactions?.length || 0,
-            comments: Math.floor(Math.random() * 20) // Simulated for now
-          }
-        }));
+        const processedGraves = fetchedGraves.map(grave => {
+          const processed = {
+            ...grave,
+            _count: {
+              reactions: grave.reactions?.length || 0,
+              comments: Math.floor(Math.random() * 20) // Simulated for now
+            }
+          };
+          console.log('🔄 Processed grave:', processed.title, 'Reactions:', processed._count.reactions);
+          return processed;
+        });
         
-        console.log('Processed graves:', processedGraves);
+        console.log('✨ Final processed graves:', processedGraves);
         setGraves(processedGraves);
       } else {
-        console.warn('No graves found in database');
+        console.warn('⚠️ No published graves found in database');
+        
+        // Let's also check for unpublished graves
+        const { data: unpublishedCheck } = await supabase
+          .from('graves')
+          .select('id, title, published')
+          .eq('published', false)
+          .limit(5);
+        
+        console.log('🔍 Unpublished graves check:', unpublishedCheck);
         setGraves([]);
       }
     } catch (err) {
-      console.error('Error fetching graves:', err);
+      console.error('💥 Error fetching graves:', err);
       setError('Failed to load graves');
       setGraves([]);
       
@@ -132,6 +155,8 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
   // Optimistic reaction toggle
   const toggleReaction = useCallback(async (graveId: string, reactionType: 'skull' | 'fire' | 'crying' | 'clown') => {
     if (!user) return;
+
+    console.log('👆 Toggling reaction:', reactionType, 'for grave:', graveId);
 
     // Optimistic update
     setGraves(prevGraves => 
@@ -211,6 +236,7 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
 
   // Real-time subscription and initial fetch
   useEffect(() => {
+    console.log('🔄 useEffect triggered - fetching graves...');
     fetchGraves();
 
     // Set up real-time subscription for live updates
@@ -224,7 +250,7 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
           table: 'graves',
         },
         (payload) => {
-          console.log('Real-time grave update:', payload);
+          console.log('📡 Real-time grave update:', payload);
           fetchGraves(); // Refetch on any change
         }
       )
@@ -236,7 +262,7 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
           table: 'reactions',
         },
         (payload) => {
-          console.log('Real-time reaction update:', payload);
+          console.log('📡 Real-time reaction update:', payload);
           fetchGraves(); // Refetch on reaction changes
         }
       )
@@ -252,11 +278,20 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
     if (!isOnline) return;
     
     const interval = setInterval(() => {
+      console.log('⏰ Auto-refresh triggered');
       fetchGraves();
     }, 30000);
 
     return () => clearInterval(interval);
   }, [fetchGraves, isOnline]);
+
+  console.log('🎯 useRealTimeGraves returning:', { 
+    gravesCount: graves.length, 
+    loading, 
+    error, 
+    isOnline,
+    graveTitles: graves.map(g => g.title)
+  });
 
   return {
     graves,
