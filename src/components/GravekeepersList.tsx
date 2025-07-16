@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Skull, Flame } from 'lucide-react';
+import { Crown, Skull, Flame, Ghost } from 'lucide-react';
 import { useRealTimeStats } from '@/hooks/useRealTimeStats';
 
 const GravekeepersList = () => {

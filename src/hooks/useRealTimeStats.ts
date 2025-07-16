@@ -27,6 +27,12 @@ export const useRealTimeStats = () => {
     recentActivity: []
   });
   const [loading, setLoading] = useState(true);
+  const [animating, setAnimating] = useState({
+    totalGraves: false,
+    totalUsers: false,
+    totalReactions: false,
+    activeBurials: false
+  });
 
   const fetchStats = async () => {
     try {
@@ -77,14 +83,38 @@ export const useRealTimeStats = () => {
         timestamp: grave.created_at
       })) || [];
 
-      setStats({
+      const newStats = {
         totalGraves: gravesResult.data?.length || 0,
         totalUsers: usersResult.data?.length || 0,
         totalReactions: reactionsResult.data?.length || 0,
         activeBurials: recentGraves?.length || 0,
         activeUsers,
         recentActivity: formattedActivity
-      });
+      };
+
+      // Check if stats changed to trigger animations
+      const statsChanged = {
+        totalGraves: newStats.totalGraves !== stats.totalGraves,
+        totalUsers: newStats.totalUsers !== stats.totalUsers,
+        totalReactions: newStats.totalReactions !== stats.totalReactions,
+        activeBurials: newStats.activeBurials !== stats.activeBurials
+      };
+
+      setStats(newStats);
+
+      // Trigger animations for changed stats
+      if (statsChanged.totalGraves || statsChanged.totalUsers || statsChanged.totalReactions || statsChanged.activeBurials) {
+        setAnimating(statsChanged);
+        // Reset animations after 1 second
+        setTimeout(() => {
+          setAnimating({
+            totalGraves: false,
+            totalUsers: false,
+            totalReactions: false,
+            activeBurials: false
+          });
+        }, 1000);
+      }
 
       console.log('✅ Stats updated:', {
         graves: gravesResult.data?.length,
@@ -163,5 +193,5 @@ export const useRealTimeStats = () => {
     };
   }, []);
 
-  return { stats, loading, refetch: fetchStats };
+  return { stats, loading, animating, refetch: fetchStats };
 };
