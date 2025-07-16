@@ -19,7 +19,7 @@ const LiveActivityFeed = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
+            {[...Array(4)].map((_, i) => (
               <div key={i} className="flex items-center gap-3 animate-pulse">
                 <div className="w-8 h-8 bg-slate-700 rounded-full"></div>
                 <div className="flex-1">
@@ -49,31 +49,38 @@ const LiveActivityFeed = () => {
         <div className="space-y-4">
           {/* Recent Activity */}
           <div className="space-y-3">
-            {stats.recentActivity.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-3 p-2 rounded-lg bg-slate-900/50">
-                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white text-sm">
-                  🪦
+            {stats.recentActivity.length > 0 ? (
+              stats.recentActivity.map((activity) => (
+                <div key={activity.id} className="flex items-start gap-3 p-2 rounded-lg bg-slate-900/50">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white text-sm">
+                    🪦
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-200">
+                      <span className="font-medium text-green-400">{activity.user}</span>
+                      {activity.type === 'burial' && (
+                        <>
+                          {' '}buried{' '}
+                          <span className="font-medium text-slate-100">"{activity.grave_title}"</span>
+                        </>
+                      )}
+                    </p>
+                    <p className="text-xs text-slate-400 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {new Date(activity.timestamp).toLocaleTimeString()}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-200">
-                    <span className="font-medium text-green-400">{activity.user}</span>
-                    {activity.type === 'burial' && (
-                      <>
-                        {' '}buried{' '}
-                        <span className="font-medium text-slate-100">"{activity.grave_title}"</span>
-                      </>
-                    )}
-                  </p>
-                  <p className="text-xs text-slate-400 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {new Date(activity.timestamp).toLocaleTimeString()}
-                  </p>
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-4 text-slate-400">
+                <Zap className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Loading activity...</p>
               </div>
-            ))}
+            )}
           </div>
 
-          {/* Active Users Today */}
+          {/* Active Users */}
           <div className="border-t border-slate-700/50 pt-4">
             <div className="flex items-center gap-2 mb-3">
               <Users className="w-4 h-4 text-green-400" />
@@ -82,7 +89,7 @@ const LiveActivityFeed = () => {
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {stats.activeUsers.slice(0, 8).map((user, index) => (
+              {stats.activeUsers.slice(0, 6).map((user, index) => (
                 <Badge 
                   key={index}
                   variant="secondary" 
@@ -91,15 +98,15 @@ const LiveActivityFeed = () => {
                   👻 {user}
                 </Badge>
               ))}
-              {stats.activeUsers.length > 8 && (
+              {stats.activeUsers.length > 6 && (
                 <Badge variant="secondary" className="text-xs bg-slate-700/50 text-slate-400">
-                  +{stats.activeUsers.length - 8} more
+                  +{stats.activeUsers.length - 6} more
                 </Badge>
               )}
             </div>
           </div>
 
-          {/* Platform Stats */}
+          {/* Quick Stats */}
           <div className="border-t border-slate-700/50 pt-4">
             <div className="grid grid-cols-2 gap-3 text-center">
               <div className="p-2 rounded-lg bg-slate-900/50">

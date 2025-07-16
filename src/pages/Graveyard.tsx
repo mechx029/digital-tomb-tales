@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -63,22 +64,6 @@ const Graveyard = () => {
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-500/5 rounded-full blur-3xl animate-pulse" />
           <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500/5 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
-          
-          {/* Floating tombstones */}
-          {[...Array(15)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute text-2xl opacity-10 animate-float"
-              style={{
-                left: `${Math.random() * 90}%`,
-                top: `${Math.random() * 80}%`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${8 + Math.random() * 4}s`
-              }}
-            >
-              {['💀', '👻', '⚰️', '🕯️', '🪦'][Math.floor(Math.random() * 5)]}
-            </div>
-          ))}
         </div>
 
         <div className="container mx-auto px-4 py-8 relative z-10">
@@ -86,9 +71,6 @@ const Graveyard = () => {
           <div className="text-center mb-12">
             <div className="mb-6 relative">
               <span className="text-8xl block mb-4 animate-bounce" style={{ animationDuration: '3s' }}>🪦</span>
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-3xl animate-float opacity-60">
-                👻
-              </div>
             </div>
             
             <h1 className="font-creepster text-4xl md:text-6xl text-green-400 glow-text mb-4">
@@ -108,6 +90,14 @@ const Graveyard = () => {
             {error && (
               <div className="mt-4 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
                 <p className="text-red-400 text-sm">{error}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => window.location.reload()}
+                  className="mt-2"
+                >
+                  Refresh Graveyard
+                </Button>
               </div>
             )}
 
@@ -220,27 +210,17 @@ const Graveyard = () => {
           </Tabs>
 
           {/* Empty State */}
-          {!loading && graves.length === 0 && (
+          {!loading && graves.length === 0 && !error && (
             <div className="text-center py-20">
               <span className="text-8xl block mb-6 animate-pulse">👻</span>
               <h3 className="text-2xl text-slate-300 mb-4">The graveyard is empty...</h3>
-              <p className="text-slate-400 mb-8">Something went wrong loading the graves. Try refreshing the page.</p>
+              <p className="text-slate-400 mb-8">Be the first to bury something in our digital cemetery!</p>
               <Button
-                onClick={() => window.location.reload()}
+                onClick={() => navigate('/bury')}
                 className="bg-green-600 hover:bg-green-500 px-8 py-3"
               >
-                Refresh Graveyard
+                🪦 Bury First Grave
               </Button>
-            </div>
-          )}
-
-          {/* Real-time activity indicator */}
-          {graves.length > 0 && (
-            <div className="fixed bottom-6 right-6 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg p-3 text-xs text-slate-300">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full animate-pulse ${isOnline ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                <span>{isOnline ? 'Live updates active' : 'Offline mode'}</span>
-              </div>
             </div>
           )}
         </div>

@@ -17,7 +17,7 @@ import { useRealTimeStats } from '@/hooks/useRealTimeStats';
 const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { graves, loading, toggleReaction } = useRealTimeGraves('newest');
+  const { graves, loading, toggleReaction, error } = useRealTimeGraves('newest');
   const { stats } = useRealTimeStats();
 
   // Get recent graves for the feed (limit to 6 for homepage)
@@ -81,6 +81,21 @@ const Index = () => {
               </Button>
             </div>
           </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="mb-8 p-4 bg-red-900/20 border border-red-500/30 rounded-lg text-center">
+              <p className="text-red-400">{error}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.location.reload()}
+                className="mt-2"
+              >
+                Refresh Page
+              </Button>
+            </div>
+          )}
 
           {/* Live Platform Activity Dashboard */}
           <div className="mb-12">
@@ -154,6 +169,21 @@ const Index = () => {
               onReaction={handleReaction}
             />
           </section>
+
+          {/* Empty State */}
+          {!loading && graves.length === 0 && !error && (
+            <div className="text-center py-12">
+              <span className="text-8xl block mb-6">👻</span>
+              <h3 className="text-2xl text-slate-300 mb-4">No graves found...</h3>
+              <p className="text-slate-400 mb-8">Be the first to bury something in our digital cemetery!</p>
+              <Button
+                onClick={() => navigate('/bury')}
+                className="bg-green-600 hover:bg-green-500 px-8 py-3"
+              >
+                🪦 Bury First Grave
+              </Button>
+            </div>
+          )}
 
           {/* CTA Section */}
           <div className="text-center">

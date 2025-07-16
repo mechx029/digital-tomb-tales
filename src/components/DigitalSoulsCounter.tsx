@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Ghost, Users, Flame } from 'lucide-react';
+import { Ghost, Flame } from 'lucide-react';
 import { useRealTimeStats } from '@/hooks/useRealTimeStats';
 
 const DigitalSoulsCounter = () => {
