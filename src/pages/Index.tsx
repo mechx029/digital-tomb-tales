@@ -4,12 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRealTimeGraves } from '@/hooks/useRealTimeGraves';
-import { useRealTimeStats } from '@/hooks/useRealTimeStats';
 import { useAuth } from '@/contexts/AuthContext';
 import GraveGrid from '@/components/GraveGrid';
 import SEOHead from '@/components/SEOHead';
 import LaunchStats from '@/components/LaunchStats';
 import ViralCallout from '@/components/ViralCallout';
+import LiveActivityFeed from '@/components/LiveActivityFeed';
+import DigitalSoulsCounter from '@/components/DigitalSoulsCounter';
+import GravekeepersList from '@/components/GravekeepersList';
+import { useRealTimeStats } from '@/hooks/useRealTimeStats';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -56,7 +59,7 @@ const Index = () => {
                 Where digital regrets come to rest in peace. Bury your failed startups, cringe DMs, and questionable life choices.
               </p>
               <p className="text-sm text-slate-400 mb-8">
-                Join thousands sharing their epic fails • 48+ viral graves • Real-time reactions
+                Join thousands sharing their epic fails • {stats.totalGraves}+ viral graves • Real-time reactions
               </p>
             </div>
 
@@ -76,6 +79,22 @@ const Index = () => {
               >
                 👻 Explore Fails
               </Button>
+            </div>
+          </div>
+
+          {/* Live Platform Activity Dashboard */}
+          <div className="mb-12">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-purple-500 mb-2">
+                🔴 Live Digital Graveyard
+              </h2>
+              <p className="text-slate-400">Real-time activity from our community of digital mourners</p>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <DigitalSoulsCounter />
+              <LiveActivityFeed />
+              <GravekeepersList />
             </div>
           </div>
 

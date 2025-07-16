@@ -1,108 +1,167 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface Stats {
+interface PlatformStats {
   totalGraves: number;
   totalUsers: number;
   totalReactions: number;
   activeBurials: number;
+  activeUsers: string[];
+  recentActivity: Array<{
+    id: string;
+    type: 'burial' | 'reaction';
+    user: string;
+    grave_title?: string;
+    timestamp: string;
+  }>;
 }
 
 export const useRealTimeStats = () => {
-  const [stats, setStats] = useState<Stats>({
+  const [stats, setStats] = useState<PlatformStats>({
     totalGraves: 0,
     totalUsers: 0,
     totalReactions: 0,
-    activeBurials: 0
+    activeBurials: 0,
+    activeUsers: [],
+    recentActivity: []
   });
-  
-  const [animating, setAnimating] = useState({
-    totalGraves: false,
-    totalUsers: false,
-    totalReactions: false,
-    activeBurials: false
-  });
+  const [loading, setLoading] = useState(true);
 
-  const fetchRealStats = useCallback(async () => {
+  const fetchStats = async () => {
     try {
-      console.log('Fetching real-time stats...');
+      console.log('📊 Fetching real-time platform stats...');
       
-      const [gravesResult, usersResult, reactionsResult, recentResult] = await Promise.allSettled([
-        supabase.from('graves').select('*', { count: 'exact', head: true }).eq('published', true),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('reactions').select('*', { count: 'exact', head: true }),
-        supabase.from('graves').select('*', { count: 'exact', head: true })
-          .eq('published', true)
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      // Get total counts
+      const [gravesResult, usersResult, reactionsResult] = await Promise.all([
+        supabase.from('graves').select('id').eq('published', true),
+        supabase.from('profiles').select('id'),
+        supabase.from('reactions').select('id')
       ]);
 
-      const newStats = {
-        totalGraves: gravesResult.status === 'fulfilled' ? (gravesResult.value.count || 0) : 0,
-        totalUsers: usersResult.status === 'fulfilled' ? (usersResult.value.count || 0) : 0,
-        totalReactions: reactionsResult.status === 'fulfilled' ? (reactionsResult.value.count || 0) : 0,
-        activeBurials: recentResult.status === 'fulfilled' ? (recentResult.value.count || 0) : 0
-      };
+      // Get recent graves (last 24 hours for "active burials")
+      const { data: recentGraves } = await supabase
+        .from('graves')
+        .select('id')
+        .eq('published', true)
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
-      console.log('Real-time stats fetched:', newStats);
-      setStats(newStats);
+      // Get active users (simulate 10 random users as "active today")
+      const { data: allUsers } = await supabase
+        .from('profiles')
+        .select('username, display_name')
+        .limit(30);
+
+      // Simulate active users
+      const activeUsers = allUsers
+        ?.sort(() => Math.random() - 0.5)
+        .slice(0, 10)
+        .map(user => user.display_name || user.username) || [];
+
+      // Get recent activity for live feed
+      const { data: recentActivity } = await supabase
+        .from('graves')
+        .select(`
+          id, title, created_at,
+          profiles!inner(username, display_name)
+        `)
+        .eq('published', true)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      const formattedActivity = recentActivity?.map(grave => ({
+        id: grave.id,
+        type: 'burial' as const,
+        user: grave.profiles.display_name || grave.profiles.username,
+        grave_title: grave.title,
+        timestamp: grave.created_at
+      })) || [];
+
+      setStats({
+        totalGraves: gravesResult.data?.length || 0,
+        totalUsers: usersResult.data?.length || 0,
+        totalReactions: reactionsResult.data?.length || 0,
+        activeBurials: recentGraves?.length || 0,
+        activeUsers,
+        recentActivity: formattedActivity
+      });
+
+      console.log('✅ Stats updated:', {
+        graves: gravesResult.data?.length,
+        users: usersResult.data?.length,
+        reactions: reactionsResult.data?.length
+      });
+      
     } catch (error) {
-      console.error('Error fetching real-time stats:', error);
+      console.error('❌ Error fetching stats:', error);
+    } finally {
+      setLoading(false);
     }
-  }, []);
-
-  const simulateRealTimeUpdate = useCallback(() => {
-    const statKeys = ['totalGraves', 'totalUsers', 'totalReactions', 'activeBurials'] as const;
-    const statKey = statKeys[Math.floor(Math.random() * statKeys.length)];
-    
-    // Animate the changing stat
-    setAnimating(prev => ({ ...prev, [statKey]: true }));
-    
-    setStats(prev => {
-      const newStats = { ...prev };
-      switch (statKey) {
-        case 'totalGraves':
-          newStats.totalGraves += Math.floor(Math.random() * 2) + 1;
-          break;
-        case 'totalUsers':
-          newStats.totalUsers += Math.floor(Math.random() * 3) + 1;
-          break;
-        case 'totalReactions':
-          newStats.totalReactions += Math.floor(Math.random() * 20) + 5;
-          break;
-        case 'activeBurials':
-          newStats.activeBurials = Math.floor(Math.random() * 15) + 8;
-          break;
-      }
-      return newStats;
-    });
-
-    // Remove animation after 1 second
-    setTimeout(() => {
-      setAnimating(prev => ({ ...prev, [statKey]: false }));
-    }, 1000);
-  }, []);
+  };
 
   useEffect(() => {
-    // Initial fetch
-    fetchRealStats();
+    fetchStats();
 
-    // Real-time subscription for live updates
-    const channel = supabase
-      .channel('stats-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'graves' }, fetchRealStats)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, fetchRealStats)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions' }, fetchRealStats)
+    // Set up real-time subscriptions for live updates
+    const gravesChannel = supabase
+      .channel('graves-stats-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'graves',
+          filter: 'published=eq.true'
+        },
+        (payload) => {
+          console.log('📡 Real-time grave update:', payload);
+          fetchStats();
+        }
+      )
       .subscribe();
 
-    // Simulate additional real-time updates every 15 seconds
-    const interval = setInterval(simulateRealTimeUpdate, 15000);
+    const reactionsChannel = supabase
+      .channel('reactions-stats-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reactions'
+        },
+        (payload) => {
+          console.log('📡 Real-time reaction update:', payload);
+          fetchStats();
+        }
+      )
+      .subscribe();
+
+    const profilesChannel = supabase
+      .channel('profiles-stats-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('📡 Real-time profile update:', payload);
+          fetchStats();
+        }
+      )
+      .subscribe();
+
+    // Auto-refresh stats every 30 seconds
+    const interval = setInterval(fetchStats, 30000);
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(gravesChannel);
+      supabase.removeChannel(reactionsChannel);
+      supabase.removeChannel(profilesChannel);
       clearInterval(interval);
     };
-  }, [fetchRealStats, simulateRealTimeUpdate]);
+  }, []);
 
-  return { stats, animating };
+  return { stats, loading, refetch: fetchStats };
 };

@@ -62,15 +62,6 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
       setError(null);
 
       console.log('🔍 Starting to fetch graves from Supabase...');
-      
-      // First, let's check what data exists in the graves table
-      const { data: allGravesCheck, error: checkError } = await supabase
-        .from('graves')
-        .select('id, title, published')
-        .limit(10);
-      
-      console.log('📊 All graves check (first 10):', allGravesCheck);
-      if (checkError) console.error('❌ Check error:', checkError);
 
       // Main query with proper joins
       let query = supabase
@@ -103,8 +94,7 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
         throw supabaseError;
       }
 
-      console.log('✅ Raw graves data from Supabase:', fetchedGraves);
-      console.log('📈 Number of graves fetched:', fetchedGraves?.length || 0);
+      console.log('✅ Raw graves data from Supabase:', fetchedGraves?.length || 0, 'graves');
 
       if (fetchedGraves && fetchedGraves.length > 0) {
         // Process graves with reaction counts
@@ -116,23 +106,13 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
               comments: Math.floor(Math.random() * 20) // Simulated for now
             }
           };
-          console.log('🔄 Processed grave:', processed.title, 'Reactions:', processed._count.reactions);
           return processed;
         });
         
-        console.log('✨ Final processed graves:', processedGraves);
+        console.log('✨ Final processed graves:', processedGraves.length);
         setGraves(processedGraves);
       } else {
         console.warn('⚠️ No published graves found in database');
-        
-        // Let's also check for unpublished graves
-        const { data: unpublishedCheck } = await supabase
-          .from('graves')
-          .select('id, title, published')
-          .eq('published', false)
-          .limit(5);
-        
-        console.log('🔍 Unpublished graves check:', unpublishedCheck);
         setGraves([]);
       }
     } catch (err) {
@@ -152,7 +132,7 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
     }
   }, [sortBy, isOnline, toast]);
 
-  // Optimistic reaction toggle
+  // Optimistic reaction toggle with real-time updates
   const toggleReaction = useCallback(async (graveId: string, reactionType: 'skull' | 'fire' | 'crying' | 'clown') => {
     if (!user) return;
 
@@ -212,6 +192,8 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
           .from('reactions')
           .delete()
           .eq('id', existingReaction.data.id);
+        
+        console.log('✅ Reaction removed from database');
       } else {
         await supabase
           .from('reactions')
@@ -220,9 +202,11 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
             user_id: user.id,
             reaction_type: reactionType
           });
+          
+        console.log('✅ Reaction added to database');
       }
     } catch (error) {
-      console.error('Error toggling reaction:', error);
+      console.error('❌ Error toggling reaction:', error);
       // Revert optimistic update on error
       fetchGraves();
       
@@ -239,9 +223,9 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
     console.log('🔄 useEffect triggered - fetching graves...');
     fetchGraves();
 
-    // Set up real-time subscription for live updates
-    const channel = supabase
-      .channel('graves-realtime')
+    // Set up enhanced real-time subscriptions for live updates
+    const gravesChannel = supabase
+      .channel('graves-realtime-enhanced')
       .on(
         'postgres_changes',
         {
@@ -254,6 +238,10 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
           fetchGraves(); // Refetch on any change
         }
       )
+      .subscribe();
+
+    const reactionsChannel = supabase
+      .channel('reactions-realtime-enhanced')
       .on(
         'postgres_changes',
         {
@@ -263,24 +251,45 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
         },
         (payload) => {
           console.log('📡 Real-time reaction update:', payload);
-          fetchGraves(); // Refetch on reaction changes
+          // For reactions, we can do more granular updates
+          if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
+            fetchGraves();
+          }
+        }
+      )
+      .subscribe();
+
+    const profilesChannel = supabase
+      .channel('profiles-realtime-enhanced')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+        },
+        (payload) => {
+          console.log('📡 Real-time profile update:', payload);
+          fetchGraves(); // Refetch when user profiles change
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(gravesChannel);
+      supabase.removeChannel(reactionsChannel);
+      supabase.removeChannel(profilesChannel);
     };
   }, [fetchGraves]);
 
-  // Auto-refresh every 30 seconds for fresh data
+  // Auto-refresh every 15 seconds for ultra-fresh data
   useEffect(() => {
     if (!isOnline) return;
     
     const interval = setInterval(() => {
       console.log('⏰ Auto-refresh triggered');
       fetchGraves();
-    }, 30000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [fetchGraves, isOnline]);
@@ -290,7 +299,7 @@ export const useRealTimeGraves = (sortBy: 'newest' | 'popular' | 'category' = 'n
     loading, 
     error, 
     isOnline,
-    graveTitles: graves.map(g => g.title)
+    graveTitles: graves.slice(0, 3).map(g => g.title)
   });
 
   return {
